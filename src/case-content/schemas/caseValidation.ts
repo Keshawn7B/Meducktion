@@ -107,6 +107,9 @@ export function validateCaseDefinition(input: unknown): CaseValidationResult {
   validateCondition(value.progression.terminalFailureCondition, "$.progression.terminalFailureCondition", actionIds, clueIds, add);
 
   requireReference(value.finalAnswer.diagnosisId, diagnosisIds, "$.finalAnswer.diagnosisId", "UNKNOWN_FINAL_DIAGNOSIS", add);
+  if (!["routine", "prompt", "urgent", "emergent"].includes(value.finalAnswer.urgency)) {
+    add("INVALID_FINAL_URGENCY", "$.finalAnswer.urgency", `Urgency '${value.finalAnswer.urgency}' is not recognized.`);
+  }
   requireReference(value.finalAnswer.nextStepId, nextStepIds, "$.finalAnswer.nextStepId", "UNKNOWN_FINAL_NEXT_STEP", add);
   const finalStep = value.nextSteps.find((step) => step.id === value.finalAnswer.nextStepId);
   if (finalStep && finalStep.urgency !== value.finalAnswer.urgency) add("FINAL_URGENCY_MISMATCH", "$.finalAnswer.urgency", "Final urgency does not match the selected next step.");
