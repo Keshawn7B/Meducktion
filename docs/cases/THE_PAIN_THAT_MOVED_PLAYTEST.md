@@ -84,11 +84,13 @@ Treatments apply before the listed losses. Stability is clamped 0–82. Escalati
 |---:|---|---:|---:|---|---|---|---|
 | 1 | Early local inflammation | −2 | 0 | Starting findings only | None | +4/+2 first use; cap 82 | Stops loss and opens final decision |
 | 2 | Localizing | −4 | 0 | Guided reminder to reassess changing pain | None | Same diminishing rules | Stops loss and opens final decision |
-| 3 | Guarded progression | −6 | 0 | Persistent abnormal trend if monitored; warning when stability ≤75 | None | Same | Stops loss and opens final decision |
-| 4 | Worsening with delay | −8 | −4 if not escalated | Explicit “delay is becoming unsafe” warning before loss | Armed for next interval | Same | Stops both losses and opens final decision |
-| 5 | Late/complicated | −10 | −6 if not escalated | Explicit complication warning | −12 if not escalated | Same | Stops all three losses and opens final decision |
+| 3 | Guarded progression | −6 | 0 | Persistent abnormal trend if monitored; Guarded warning; warning that next-interval delay is unsafe | None | Same | Stops loss and opens final decision |
+| 4 | Worsening with delay | −8 | −4 if not escalated | Warning after progression that a next-interval complication is imminent | Armed for next interval | Same | Stops both losses and opens final decision |
+| 5 | Late/complicated | −10 | −6 if not escalated | Prior warning remains visible | −12 if not escalated | Same | Stops all three losses and opens final decision |
 
 At stability 25 or below, state is Critical; at 0, immediate Critical failure. Escalation is the only MVP action that stops deterioration. Fluids and symptom support offset stability loss but never stop progression and have diminishing returns.
+
+Warnings are evaluated after progression by the approved resolution order. Therefore the Interval-4 delay warning is issued at the Interval-3 decision, and the Interval-5 complication warning is issued at the Interval-4 decision, giving players a full planning window to respond.
 
 ## 6. Test timing examples
 

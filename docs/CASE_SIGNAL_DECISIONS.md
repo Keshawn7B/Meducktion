@@ -113,3 +113,43 @@
 - **Alternatives considered:** Global penalty ledger; percentage scoring.
 - **MVP consequence:** Identical terminal state and reasoning produce identical scores.
 - **Possible later revision:** Case-specific category rubrics while retaining the 1,000-point envelope.
+
+## D-015: Content validation approach
+
+- **Decision:** Use strict TypeScript types plus a lightweight dependency-free runtime validator. Reconsider Zod after application scaffolding, when package size, error formatting, and content-loading boundaries can be measured.
+- **Reason:** Compile-time checks do not protect parsed or stale content; adding a schema dependency before package setup violates current scope.
+- **Alternatives considered:** TypeScript only; installing Zod now.
+- **MVP consequence:** The handwritten validator owns cross-reference, reachability, version, and numeric invariant checks and returns all structured errors.
+- **Possible later revision:** Generate or replace runtime parsing with Zod while keeping the stable serialized format.
+
+## D-016: Cooperative capacity
+
+- **Decision:** Architect private cooperative rooms for two to four players, optimize the first playtests for two, and do not encode a permanent two-player restriction in case content.
+- **Reason:** Avoids an unnecessary content-format limitation while acknowledging that per-player Focus changes balance with room size.
+- **Alternatives considered:** Two players only; unbounded rooms.
+- **MVP consequence:** Case metadata recommends two and permits four; human balance tests must cover three/four players before claiming support quality.
+- **Possible later revision:** Team Focus scaling or mode-level caps outside authored case identity.
+
+## D-017: Review authority and release gates
+
+- **Decision:** Record role-based approvals for Content author, Source checker, Qualified medical reviewer, Gameplay reviewer, and Release approver. Local development requires Draft; closed internal playtests require an internal consistency check; external closed tests require Source checked plus Medical review required and an unapproved label; public release requires Release approved after Medically approved and Gameplay tested.
+- **Reason:** Roles remain stable when people change and prevent source checking from being mistaken for medical approval.
+- **Alternatives considered:** Named individuals in schema; one approval flag.
+- **MVP consequence:** The first case is `medicalReviewRequired`, with medical and release approvals pending.
+- **Possible later revision:** Organizational credential policy and expiry/re-review dates.
+
+## D-018: Focused abdominal examination cost
+
+- **Decision:** Keep the focused abdominal examination at 1 Focus. It reveals two related authored findings.
+- **Reason:** Paper simulation shows it is strong but does not independently satisfy the complete reasoning and safety loop.
+- **Alternatives considered:** Cost 2; split tenderness and guarding into separate actions.
+- **MVP consequence:** This is explicitly a gameplay abstraction, not a claim about real clinical time or complexity.
+- **Possible later revision:** Raise cost or split results if human playtests show it dominates other choices.
+
+## D-019: Warning lead time versus resolution order
+
+- **Decision:** Evaluate warnings after progression as established in D-002, but trigger the Interval-4 delay warning at the end of Interval 3 and the Interval-5 complication warning at the end of Interval 4.
+- **Reason:** The paper table required warnings before losses, which contradicted the approved ordering; same-interval post-progression warnings would not allow a response.
+- **Alternatives considered:** Move warning evaluation before progression; show warnings immediately before unavoidable loss.
+- **MVP consequence:** Numeric progression is unchanged and each major authored deterioration has a full decision/planning window of notice.
+- **Possible later revision:** Add explicit pre/post-progression warning timing if future cases need both.

@@ -8,3 +8,6 @@
 - [Development roadmap](docs/CASE_SIGNAL_ROADMAP.md)
 - [MVP decision log](docs/CASE_SIGNAL_DECISIONS.md)
 - [First-case paper playtest](docs/cases/THE_PAIN_THAT_MOVED_PLAYTEST.md)
+- [Case authoring guide](docs/CASE_SIGNAL_CASE_AUTHORING.md)
+- [Schema test specification](docs/CASE_SIGNAL_SCHEMA_TESTS.md)
+- [First machine-readable case](src/case-content/cases/thePainThatMoved.ts)
