@@ -82,10 +82,10 @@ This roadmap is gated: each phase begins only after the prior phase's completion
 - Never introduce live unreviewed AI medical content.
 - Reassess title availability before branding investment or public launch.
 
-## Immediate unresolved decisions
+## Remaining Phase 0 questions
 
 - Confirm whether an existing application/Firebase room system will be supplied; none is present now.
-- Paper-test Focus costs, Care Budget, delays, stability changes, and complication timing.
-- Select team or per-player differential ownership for cooperative play.
-- Define reviewer qualifications, sign-off records, and re-review triggers.
-- Decide the client-only room expiry policy and acceptable data retention.
+- Select the content schema format and validation library during the separately approved scaffolding task.
+- Decide whether the first cooperative case is formally capped at two players.
+- Name reviewer qualifications, release authority, sign-off storage, and re-review triggers before public release.
+- Validate the documented action economy through human paper playtests; the current four scripted simulations are design checks, not player evidence.

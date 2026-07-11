@@ -99,7 +99,7 @@ Direction is diagnosis-relative: the same clue can support one diagnosis, confli
 
 ## 10. Differential diagnosis
 
-Each player or team maintains a ranked differential with confidence levels: Unlikely, Possible, Plausible, Leading, and Highly supported. A complete Case Call requires at least two supporting clues from at least two evidence categories, one major alternative, and a reason that alternative is less likely.
+Solo maintains one player-owned ranked differential; cooperative MVP maintains one shared team differential. Confidence levels are Unlikely, Possible, Plausible, Leading, and Highly supported. A complete Case Call requires at least two supporting clues from at least two evidence categories, one major alternative, and a reason that alternative is less likely.
 
 Diagnoses may carry **Must Exclude**, **High danger**, or **Time sensitive** markers. These labels affect safety feedback and serious-alternative checks; they do not reveal the true diagnosis.
 
@@ -146,7 +146,7 @@ Maximum score is **1,000 points**:
 | Testing and resource efficiency | 100 |
 | Speed or coordination | 50 |
 
-Illustrative, case-tunable penalties include: incorrect Case Call −100 escalating on repeated calls; unnecessary major test −15 to −40; duplicate test −20; harmful treatment −75 to −200; ignored danger sign −50; delay-caused complication −50 to −150; and critical deterioration up to the full 200-point safety loss. Penalties must be disclosed, deterministic from authored rules, bounded within the category totals, and never reduce the overall score below zero.
+Later cases may tune penalties for incorrect calls, unnecessary/duplicate tests, harmful treatment, ignored danger signs, delay-caused complications, and critical deterioration. For the MVP first case, the exact category-bounded formulas in [the paper-playtest specification](cases/THE_PAIN_THAT_MOVED_PLAYTEST.md) are authoritative. Penalties must be disclosed, deterministic from authored rules, bounded within category totals, and never reduce the overall score below zero.
 
 ## 17. Game modes
 
@@ -225,9 +225,9 @@ Avoid detailed dosing, personalized advice, certainty based on one clue, claims 
 | Inconsistent AI-generated art | Art direction, curated bundled assets, human review, consistent asset pipeline |
 | Scope creep | One-case vertical slice, explicit exclusions, phase gates and acceptance criteria |
 
-## Open product decisions
+## Phase 0 rule references
 
-- Final Focus and Care Budget costs require paper playtesting.
-- Practice mode's relationship to scoring and progression needs definition.
-- Team ownership versus per-player ownership of the ranked differential needs usability testing.
-- Medical reviewer qualifications, approval workflow, and content update policy must be established before public release.
+- [MVP decision log](CASE_SIGNAL_DECISIONS.md)
+- [The Pain That Moved paper playtest](cases/THE_PAIN_THAT_MOVED_PLAYTEST.md)
+
+Practice mode uses the same deterministic rules and displays a score, but does not contribute to later progression or competitive records. Medical reviewer qualifications and named release authority still require organizational approval before public release.

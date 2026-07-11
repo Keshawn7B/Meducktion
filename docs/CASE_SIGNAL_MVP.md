@@ -73,7 +73,7 @@ All results are fictional/simulated and phrased without absolute diagnostic clai
 | Tests | Blood count; urinalysis; abdominal ultrasound |
 | Treatment/safety | Supportive fluids; symptom support; urgent escalation |
 
-Specific costs, delays, yields, and progression values are content-schema inputs to validate on paper before implementation. Defaults must honor two Focus per interval and at most two major pending tests.
+The authoritative costs, delays, progression values, Case Call rules, and scoring formulas are defined in [the paper-playtest specification](cases/THE_PAIN_THAT_MOVED_PLAYTEST.md). Each solo/cooperative player receives 2 non-carrying Focus per interval; the team shares an 8-unit Care Budget and one shared differential. At most two major tests may be pending.
 
 ## Required playable flow
 
@@ -128,3 +128,7 @@ Release requires every acceptance item, a medically reviewed and versioned case,
 ## Current repository assumption
 
 At documentation time the repository contains no application, package configuration, or Firebase room implementation. References to reuse are therefore conditional: implementation must first confirm whether prior room code is supplied or whether a minimal Spark-compatible room layer needs to be created under a separately approved migration plan.
+
+## Resolved Phase 0 rules
+
+The MVP rule contract and rationale are recorded in [the decision log](CASE_SIGNAL_DECISIONS.md). Solo resume uses versioned `localStorage`; cooperative state uses one shared differential with version-checked commits; room expiry is best-effort without Cloud Functions; and the first case remains Draft/medical-review-required rather than medically approved.

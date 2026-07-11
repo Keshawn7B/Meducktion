@@ -64,7 +64,7 @@ Tests should sit near units or in clearly named test directories; choose one con
 | Shared phase, interval, stability, revealed evidence, pending tests | Room state | Firestore at transitions |
 | Locked player actions/status | Player subdocument or compact room partition | Firestore on lock/change of readiness |
 | Hover, expanded cards, uncommitted selections | React client | Local only |
-| Solo run | Engine/client | Local for MVP; optional resumable persistence later |
+| Solo run | Engine/client | Versioned `localStorage` after meaningful transitions |
 | Final outcome and score | Deterministic engine result | Shared completion snapshot |
 
 Multiplayer resolution should be deterministic from the pinned content version, prior state, and locked actions. One designated resolver/host proposes the transition with an expected version; Firestore transaction checks prevent duplicate progression. This improves consistency but is not server-authoritative security.
@@ -130,6 +130,10 @@ A reconnecting player authenticates anonymously, loads the pinned case version a
 
 Presence based only on client timestamps is approximate. UX should tolerate brief disconnections, provide retry/rejoin paths, and avoid advancing while resolution ownership is uncertain.
 
+## Shared differential and room expiry
+
+Cooperative MVP synchronizes one committed team differential. Edits remain local drafts until a version-checked commit; conflicts reload and require an explicit reapply rather than silent last-write-wins. Rooms expire 24 hours after creation, extended to at least 2 hours after a committed transition. Hosts delete on explicit close; expired joins are refused and clients attempt deletion when permitted. Abandoned documents may remain until a client detects expiry or future maintenance exists.
+
 ## Testing strategy
 
 - **Vitest:** pure engine rules, content validators, scoring, progression, serialization, and first-case fixtures.
@@ -147,8 +151,6 @@ Set explicit budgets for reads/writes per interval, listen only to necessary doc
 There is no existing architecture to conflict with or reuse. The request's reference to an existing Firebase room system cannot be verified in the current repository. Before implementation, decide:
 
 1. Whether prior application/room code will be imported or a greenfield app is intended.
-2. Exact resolution ordering and action economy.
-3. Team versus individual differential ownership.
-4. Solo save/resume requirements.
-5. Room expiry/cleanup approach without Cloud Functions.
-6. Content schema format and validation library.
+2. Content schema format and validation library.
+3. Whether cooperative rooms should remain capped at two players for this case.
+4. Whether an emulator-tested client cleanup operation is permitted by final security rules.
