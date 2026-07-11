@@ -120,7 +120,7 @@ All values are integers. Add six category scores, then clamp total to 0–1,000;
 | Safety, 0–200 | Final stability ≥76: 200; 61–75: 170; 41–60: 120; 26–40: 70; 1–25: 25; 0: 0 |
 | Reasoning, 0–150 | Valid supporting clue 40 each (max 80); two or more evidence categories 20; valid alternative 10; revealed evidence correctly weakens it 20; all submitted evidence relationships correctly classified 20. Safe no-diagnosis outcome: 0. |
 | Urgency/next step, 0–150 | Correct urgency 75; correct next step 75. A safe escalation-without-call earns both because the action commits to the authored urgent disposition. Otherwise each is independently 0/75. |
-| Efficiency, 0–100 | `clamp(60 + 5 × unused budget − 10 × low-value completed actions − 20 × wasteful completed actions, 0, 100)`. High-value/reasonable actions have no deduction. Repeated zero-benefit treatment is wasteful. Rejected actions do not count. |
+| Efficiency, 0–100 | `clamp(60 + 5 × unused budget − 10 × low-value completed diagnostic/information actions − 20 × wasteful completed actions − 10 if every authored major test was ordered, 0, 100)`. Supportive treatment/safety actions are exempt from the low-value deduction because their value is scored through safety; repeated zero-benefit treatment remains wasteful. Rejected actions do not count. |
 | Speed/coordination, 0–50 | Terminal decision in Interval 1/2/3/4/5 earns 50/40/30/20/10. A forced delay from an incorrect call advances the terminal interval. Cooperative mode also requires all players locked; no separate bonus. |
 
 ### Scored walkthrough summaries

@@ -182,11 +182,11 @@ export const thePainThatMoved: CaseDefinition = {
     ceiling: 1000,
     rounding: "integersOnly",
     categories: {
-      diagnosis: { maximum: 350, correctFirstAttempt: 350, correctAfterOneIncorrect: 250, safeWithoutDiagnosis: 175 },
+      diagnosis: { maximum: 350, correctFirstAttempt: 350, correctAfterOneIncorrect: 250, safeWithoutDiagnosis: 175, firstIncorrectCall: 100 },
       safety: { maximum: 200, stabilityBandsDescending: [{ minimumValue: 76, points: 200 }, { minimumValue: 61, points: 170 }, { minimumValue: 41, points: 120 }, { minimumValue: 26, points: 70 }, { minimumValue: 1, points: 25 }, { minimumValue: 0, points: 0 }] },
       reasoning: { maximum: 150, pointsPerValidSupportingClue: 40, supportingCluePointsMaximum: 80, categoryDiversityPoints: 20, validAlternativePoints: 10, weakeningEvidencePoints: 20, correctClassificationPoints: 20 },
       urgencyAndNextStep: { maximum: 150, urgencyPoints: 75, nextStepPoints: 75, safeEscalationAwardsBoth: true },
-      efficiency: { maximum: 100, basePoints: 60, pointsPerUnusedBudget: 5, lowValuePenalty: 10, wastefulPenalty: 20 },
+      efficiency: { maximum: 100, basePoints: 60, pointsPerUnusedBudget: 5, lowValuePenalty: 10, wastefulPenalty: 20, treatmentActionsExempt: true, allMajorTestsOrderedPenalty: 10 },
       speedAndCoordination: { maximum: 50, pointsByTerminalInterval: { 1: 50, 2: 40, 3: 30, 4: 20, 5: 10 } },
     },
   },

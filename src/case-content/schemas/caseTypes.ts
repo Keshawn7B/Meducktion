@@ -331,7 +331,7 @@ export interface ScoringConfiguration {
   ceiling: 1000;
   rounding: "integersOnly";
   categories: {
-    diagnosis: { maximum: 350; correctFirstAttempt: 350; correctAfterOneIncorrect: 250; safeWithoutDiagnosis: 175 };
+    diagnosis: { maximum: 350; correctFirstAttempt: 350; correctAfterOneIncorrect: 250; safeWithoutDiagnosis: 175; firstIncorrectCall: 100 };
     safety: { maximum: 200; stabilityBandsDescending: ScoreBand[] };
     reasoning: {
       maximum: 150;
@@ -343,7 +343,7 @@ export interface ScoringConfiguration {
       correctClassificationPoints: 20;
     };
     urgencyAndNextStep: { maximum: 150; urgencyPoints: 75; nextStepPoints: 75; safeEscalationAwardsBoth: true };
-    efficiency: { maximum: 100; basePoints: 60; pointsPerUnusedBudget: 5; lowValuePenalty: 10; wastefulPenalty: 20 };
+    efficiency: { maximum: 100; basePoints: 60; pointsPerUnusedBudget: 5; lowValuePenalty: 10; wastefulPenalty: 20; treatmentActionsExempt: boolean; allMajorTestsOrderedPenalty: number };
     speedAndCoordination: { maximum: 50; pointsByTerminalInterval: Record<number, number> };
   };
 }

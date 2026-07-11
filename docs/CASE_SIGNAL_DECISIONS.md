@@ -153,3 +153,11 @@
 - **Alternatives considered:** Move warning evaluation before progression; show warnings immediately before unavoidable loss.
 - **MVP consequence:** Numeric progression is unchanged and each major authored deterioration has a full decision/planning window of notice.
 - **Possible later revision:** Add explicit pre/post-progression warning timing if future cases need both.
+
+## D-020: Efficiency scoring clarification
+
+- **Decision:** Low-value deductions apply to diagnostic/information actions, not supportive treatment or safety actions; ordering every authored major test adds a 10-point efficiency penalty. Repeated zero-benefit treatment remains wasteful.
+- **Reason:** The previously written formula could not produce both approved Path B (810) and Path D (655); the examples consistently treated safety support separately and test spam as an additional inefficiency.
+- **Alternatives considered:** Change approved totals to 820/645; add path-specific scoring; change action classifications.
+- **MVP consequence:** The general case configuration now reproduces all four approved totals without path-specific bonuses.
+- **Possible later revision:** Move more efficiency rules into authored penalty objects when additional cases establish shared needs.

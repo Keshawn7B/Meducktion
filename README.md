@@ -14,7 +14,7 @@
 
 ## Development verification
 
-This repository currently contains the CASE//SIGNAL content/schema validation foundation, not a playable web application.
+This repository currently contains the CASE//SIGNAL content/schema validation foundation and a framework-independent deterministic game engine, but not a playable web application or UI.
 
 ```powershell
 npm install
@@ -22,3 +22,5 @@ npm run typecheck
 npm test
 npm run validate:cases
 ```
+
+- [Game engine contract](docs/CASE_SIGNAL_ENGINE.md)
