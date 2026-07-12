@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { caseRegistry, CURRENT_CASE_SCHEMA_VERSION, validateCaseDefinition } from "./index";
 
-describe("registered CASE//SIGNAL content", () => {
+describe("registered Meducktion content", () => {
   it.each(caseRegistry)("validates $caseId at its pinned versions", (caseDefinition) => {
     const result = validateCaseDefinition(caseDefinition);
 

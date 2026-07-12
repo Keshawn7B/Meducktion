@@ -2,9 +2,9 @@
 
 **Case ID:** `case.pain_moved.v1`  
 **Content status:** Draft; source checking and medical review required  
-**Purpose:** Deterministic design fixture for the CASE//SIGNAL MVP
+**Purpose:** Deterministic design fixture for the Meducktion MVP
 
-> CASE//SIGNAL is a fictional educational game. It is not medical advice, clinical training, or a diagnostic tool. It must not be used to make decisions about real patients.
+> Meducktion is a fictional educational game. It is not medical advice, clinical training, or a diagnostic tool. It must not be used to make decisions about real patients.
 
 ## 1. Case summary
 

@@ -1,4 +1,4 @@
-# CASE//SIGNAL Schema Test Specification
+# Meducktion Schema Test Specification
 
 No TypeScript/test toolchain exists yet, so these tests are specifications for the future Vitest suite. No passing execution result is claimed.
 

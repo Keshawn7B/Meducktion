@@ -1,4 +1,4 @@
-# CASE//SIGNAL Game Engine
+# Meducktion Game Engine
 
 The engine is a pure TypeScript state-transition layer. It creates version-pinned case state, validates and locks actions, resolves deterministic Care Intervals, manages evidence/tests/treatments/progression, validates the shared differential and Case Calls, completes cases, and calculates the configured 1,000-point score.
 

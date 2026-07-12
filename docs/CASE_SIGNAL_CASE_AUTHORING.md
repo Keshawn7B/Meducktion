@@ -1,4 +1,4 @@
-# CASE//SIGNAL Case Authoring Guide
+# Meducktion Case Authoring Guide
 
 ## Identity and versioning
 

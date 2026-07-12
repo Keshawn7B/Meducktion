@@ -1,4 +1,4 @@
-# CASE//SIGNAL MVP Decision Log
+# Meducktion MVP Decision Log
 
 **Scope:** Phase 0 rules for the first playable version. These decisions supersede ambiguous or illustrative wording elsewhere; the case playtest is the executable design reference for *The Pain That Moved*.
 

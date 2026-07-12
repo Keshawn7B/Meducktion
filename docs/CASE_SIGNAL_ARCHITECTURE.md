@@ -1,4 +1,4 @@
-# CASE//SIGNAL Architecture Plan
+# Meducktion Architecture Plan
 
 ## Current-state assessment
 

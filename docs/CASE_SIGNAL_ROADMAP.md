@@ -1,4 +1,4 @@
-# CASE//SIGNAL Development Roadmap
+# Meducktion Development Roadmap
 
 This roadmap is gated: each phase begins only after the prior phase's completion criteria are met. Medical review, accessibility, cost control, and the fictional-game disclaimer are cross-cutting requirements.
 

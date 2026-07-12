@@ -120,12 +120,12 @@ export const thePainThatMoved: CaseDefinition = {
     title: "The Pain That Moved",
     summary: "A fictional case of evolving abdominal pain and nausea.",
     learningObjectives: ["Combine symptom evolution, focused findings, and alternatives.", "Recognize that safe escalation may matter before every test returns."],
-    disclaimer: "CASE//SIGNAL is a fictional educational game. It is not medical advice, clinical training, or a diagnostic tool. It must not be used to make decisions about real patients.",
+    disclaimer: "Meducktion is a fictional educational game. It is not medical advice, clinical training, or a diagnostic tool. It must not be used to make decisions about real patients.",
     locale: "en-US",
     tags: ["guided", "abdominal-pain", "mvp"],
     medicalReview: {
       status: "medicalReviewRequired",
-      authoredBy: "CASE//SIGNAL content team",
+      authoredBy: "Meducktion content team",
       sources: [],
       reviews: [
         { role: "contentAuthor", status: "approved", notes: "Converted from approved internal paper design." },
