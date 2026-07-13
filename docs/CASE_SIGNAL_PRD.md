@@ -119,7 +119,7 @@ Maximum score is 1,000:
 | Efficient investigation | 100 |
 | One special achievement | 50 |
 
-Wrong-attempt penalties apply after category scoring; the result is clamped to 0–1,000. Ties break by earlier correct diagnosis, fewer wrong attempts, then more valid supporting clues, followed by shared placement.
+Wrong-attempt penalties apply after category scoring; the result is clamped to 0–1,000. Ties break by earlier correct round, fewer wrong attempts, then more valid supporting clues. An exact tie uses a deterministic mystery draw derived from the match seed, producing one winner without favoring submission or player order.
 
 ## 11. First case
 

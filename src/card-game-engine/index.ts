@@ -454,7 +454,7 @@ function activePlayers(state: MatchState): PlayerState[] {
     .map((playerId) => state.players[playerId])
     .filter(
       (player): player is PlayerState =>
-        player !== undefined && !player.finalDiagnosisSubmitted,
+        player !== undefined && player.correctDiagnosisRound === null,
     );
 }
 
@@ -728,6 +728,7 @@ function resolveCard(
   events: MatchEvent[],
   player: PlayerState,
   instance: CardInstance,
+  sameRoundPublicCredits: ReadonlySet<string> = new Set(),
 ): CardPlay | null {
   const card = cardById(content, instance.cardId);
   if (card === undefined) {
@@ -736,7 +737,7 @@ function resolveCard(
   let revealedNewClue = false;
   let publicClueIds: string[] = [];
   if (card.result.type === "reveal_clue") {
-    revealedNewClue = revealClue(
+    const addedClue = revealClue(
       content,
       state,
       events,
@@ -745,6 +746,9 @@ function resolveCard(
       card.visibility,
       card.id,
     );
+    revealedNewClue =
+      addedClue ||
+      sameRoundPublicCredits.has(`${player.id}:${card.result.clueId}`);
     if (revealedNewClue && card.visibility === "public") {
       publicClueIds = [card.result.clueId];
     }
@@ -1106,67 +1110,81 @@ function finishMatch(
       player.score = calculatePlayerScore(content, state, player);
     }
   }
+  const rankingTieOrder = seededShuffle(
+    [...state.playerOrder].sort((left, right) => left.localeCompare(right)),
+    createSeededRandomState(`${state.seed}:${state.matchId}:ranking-tie`),
+  ).values;
+  const comparePlayers = (
+    left: PlayerState,
+    right: PlayerState,
+  ): { order: number; reason: MatchResult["winningTieBreak"] } => {
+    const correctDifference =
+      Number(right.correctDiagnosisRound !== null) -
+      Number(left.correctDiagnosisRound !== null);
+    if (correctDifference !== 0) {
+      return { order: correctDifference, reason: "correct_diagnosis" };
+    }
+    const scoreDifference =
+      (right.score?.total ?? 0) - (left.score?.total ?? 0);
+    if (scoreDifference !== 0) {
+      return { order: scoreDifference, reason: "total_score" };
+    }
+    const evidenceDifference =
+      (right.score?.supportingClues ?? 0) -
+      (left.score?.supportingClues ?? 0);
+    if (evidenceDifference !== 0) {
+      return { order: evidenceDifference, reason: "evidence_score" };
+    }
+    const leftRound = left.correctDiagnosisRound ?? Number.POSITIVE_INFINITY;
+    const rightRound = right.correctDiagnosisRound ?? Number.POSITIVE_INFINITY;
+    if (leftRound !== rightRound) {
+      return { order: leftRound - rightRound, reason: "earlier_correct_round" };
+    }
+    const wrongDifference =
+      left.diagnosisSubmissions.filter((submission) => !submission.correct)
+        .length -
+      right.diagnosisSubmissions.filter((submission) => !submission.correct)
+        .length;
+    if (wrongDifference !== 0) {
+      return { order: wrongDifference, reason: "fewer_wrong_diagnoses" };
+    }
+    const discoveryDifference =
+      right.plays.filter((play) => play.revealedNewClue).length -
+      left.plays.filter((play) => play.revealedNewClue).length;
+    if (discoveryDifference !== 0) {
+      return {
+        order: discoveryDifference,
+        reason: "more_unique_discoveries",
+      };
+    }
+    return {
+      order:
+        rankingTieOrder.indexOf(left.id) - rankingTieOrder.indexOf(right.id),
+      reason: "seeded_mystery_draw",
+    };
+  };
   const ranked = state.playerOrder
     .map((playerId) => state.players[playerId])
     .filter(
       (player): player is PlayerState =>
         player !== undefined && player.score !== null,
     )
-    .sort((left, right) => {
-      const scoreDifference =
-        (right.score?.total ?? 0) - (left.score?.total ?? 0);
-      if (scoreDifference !== 0) {
-        return scoreDifference;
-      }
-      const leftRound = left.correctDiagnosisRound ?? Number.POSITIVE_INFINITY;
-      const rightRound = right.correctDiagnosisRound ?? Number.POSITIVE_INFINITY;
-      if (leftRound !== rightRound) {
-        return leftRound - rightRound;
-      }
-      const wrongDifference =
-        left.diagnosisSubmissions.filter((submission) => !submission.correct)
-          .length -
-        right.diagnosisSubmissions.filter((submission) => !submission.correct)
-          .length;
-      if (wrongDifference !== 0) {
-        return wrongDifference;
-      }
-      const supportDifference =
-        (right.score?.supportingClues ?? 0) -
-        (left.score?.supportingClues ?? 0);
-      return supportDifference;
-    });
-  const rankings: MatchResult["rankings"] = [];
-  let previous: PlayerState | undefined;
-  let previousPlacement = 0;
-  for (let index = 0; index < ranked.length; index += 1) {
-    const player = ranked[index];
-    if (player?.score === null || player === undefined) {
-      continue;
-    }
-    const tied =
-      previous !== undefined &&
-      previous.score?.total === player.score.total &&
-      (previous.correctDiagnosisRound ?? Number.POSITIVE_INFINITY) ===
-        (player.correctDiagnosisRound ?? Number.POSITIVE_INFINITY) &&
-      previous.diagnosisSubmissions.filter(
-        (submission) => !submission.correct,
-      ).length ===
-        player.diagnosisSubmissions.filter(
-          (submission) => !submission.correct,
-        ).length &&
-      previous.score.supportingClues === player.score.supportingClues;
-    const placement = tied ? previousPlacement : index + 1;
-    rankings.push({ playerId: player.id, placement, score: player.score });
-    previous = player;
-    previousPlacement = placement;
-  }
+    .sort((left, right) => comparePlayers(left, right).order);
+  const rankings: MatchResult["rankings"] = ranked.map((player, index) => ({
+    playerId: player.id,
+    placement: index + 1,
+    score: player.score!,
+  }));
   state.result = {
     rankings,
     winnerPlayerIds: rankings
       .filter((entry) => entry.placement === 1)
       .map((entry) => entry.playerId),
     correctConditionId: content.correctConditionId,
+    winningTieBreak:
+      ranked[0] === undefined || ranked[1] === undefined
+        ? "only_player"
+        : comparePlayers(ranked[0], ranked[1]).reason,
   };
   state.phase = "match_complete";
   emit(state, events, "match_completed", state.result.winnerPlayerIds, {
@@ -1230,7 +1248,7 @@ export function transitionCardGame(
     if (player === undefined) {
       return fail(original, "UNKNOWN_PLAYER", "Unknown player.", command.playerId);
     }
-    if (player.finalDiagnosisSubmitted) {
+    if (player.correctDiagnosisRound !== null) {
       return fail(original, "INVALID_COMMAND", "This player has finished diagnosing.");
     }
     if (player.hand.locked) {
@@ -1324,6 +1342,25 @@ export function transitionCardGame(
       return fail(original, "CARDS_NOT_LOCKED", "All active players must lock first.");
     }
     const plays: CardPlay[] = [];
+    const publicBeforeRound = new Set(
+      state.publicClues.map((clue) => clue.clueId),
+    );
+    const sameRoundPublicCredits = new Set<string>();
+    for (const player of activePlayers(state)) {
+      const selected = player.hand.cards.find(
+        (card) => card.instanceId === player.hand.selectedCardInstanceId,
+      );
+      const definition = selected
+        ? cardById(content, selected.cardId)
+        : undefined;
+      if (
+        definition?.visibility === "public" &&
+        definition.result.type === "reveal_clue" &&
+        !publicBeforeRound.has(definition.result.clueId)
+      ) {
+        sameRoundPublicCredits.add(`${player.id}:${definition.result.clueId}`);
+      }
+    }
     for (const player of activePlayers(state)) {
       const selectedId = player.hand.selectedCardInstanceId;
       const instance = player.hand.cards.find(
@@ -1336,7 +1373,14 @@ export function transitionCardGame(
         (card) => card.instanceId !== instance.instanceId,
       );
       player.deck.discardPile.push(instance);
-      const play = resolveCard(content, state, events, player, instance);
+      const play = resolveCard(
+        content,
+        state,
+        events,
+        player,
+        instance,
+        sameRoundPublicCredits,
+      );
       if (play !== null) {
         plays.push(play);
       }
@@ -1382,10 +1426,6 @@ export function transitionCardGame(
     emit(state, events, "diagnosis_window_opened", [], {
       unlocked: state.currentRound >= 2,
     });
-    autoDiagnoseBots(content, state, events);
-    if (state.playerOrder.every((id) => state.players[id]?.finalDiagnosisSubmitted)) {
-      finishMatch(content, state, events);
-    }
     return complete(original, state, events);
   }
 
@@ -1408,6 +1448,9 @@ export function transitionCardGame(
     if (error !== null) {
       return { state: original, events: [], errors: [error] };
     }
+    if (player.kind === "human") {
+      autoDiagnoseBots(content, state, events);
+    }
     if (state.playerOrder.every((id) => state.players[id]?.finalDiagnosisSubmitted)) {
       finishMatch(content, state, events);
     }
@@ -1418,6 +1461,29 @@ export function transitionCardGame(
     if (state.phase !== "diagnosis_window") {
       return fail(original, "INVALID_PHASE", "The diagnosis window is not open.");
     }
+    const requiredFinalDiagnosis =
+      state.currentRound >= state.maximumRounds
+        ? state.playerOrder
+            .map((id) => state.players[id])
+            .find(
+              (player) =>
+                player?.kind === "human" &&
+                player.correctDiagnosisRound === null &&
+                player.diagnosisAttemptsUsed < 2 &&
+                !player.diagnosisSubmissions.some(
+                  (submission) => submission.round === state.currentRound,
+                ),
+            )
+        : undefined;
+    if (requiredFinalDiagnosis) {
+      return fail(
+        original,
+        "DIAGNOSIS_REQUIRED",
+        "A final diagnosis is required while an attempt remains.",
+        requiredFinalDiagnosis.id,
+      );
+    }
+    autoDiagnoseBots(content, state, events);
     if (
       state.currentRound >= state.maximumRounds ||
       state.playerOrder.every((id) => state.players[id]?.finalDiagnosisSubmitted)

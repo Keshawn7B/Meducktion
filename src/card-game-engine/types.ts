@@ -122,7 +122,18 @@ export interface MatchResult {
   rankings: Array<{ playerId: string; placement: number; score: PlayerScore }>;
   winnerPlayerIds: string[];
   correctConditionId: string;
+  winningTieBreak: RankingReason;
 }
+
+export type RankingReason =
+  | "only_player"
+  | "correct_diagnosis"
+  | "total_score"
+  | "evidence_score"
+  | "earlier_correct_round"
+  | "fewer_wrong_diagnoses"
+  | "more_unique_discoveries"
+  | "seeded_mystery_draw";
 
 export interface MatchEvent {
   sequence: number;
@@ -216,6 +227,7 @@ export type CardGameErrorCode =
   | "DIAGNOSIS_LOCKED"
   | "DIAGNOSIS_ATTEMPTS_EXHAUSTED"
   | "DIAGNOSIS_ALREADY_CORRECT"
+  | "DIAGNOSIS_REQUIRED"
   | "UNKNOWN_CONDITION"
   | "INVALID_SUPPORTING_CLUES"
   | "UNKNOWN_CONTENT";

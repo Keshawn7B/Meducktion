@@ -160,6 +160,20 @@ function achievementName(achievementId: string | null): string | undefined {
   return achievementId === null ? undefined : labels[achievementId];
 }
 
+function tieBreakLabel(reason: NonNullable<MatchState["result"]>["winningTieBreak"] | undefined): string {
+  const labels = {
+    only_player: "Only remaining player",
+    correct_diagnosis: "Correct diagnosis",
+    total_score: "Higher total score",
+    evidence_score: "Stronger submitted evidence",
+    earlier_correct_round: "Earlier correct round",
+    fewer_wrong_diagnoses: "Fewer wrong diagnoses",
+    more_unique_discoveries: "More unique discoveries",
+    seeded_mystery_draw: "Seeded mystery draw",
+  } as const;
+  return reason ? labels[reason] : "Final score";
+}
+
 function screenForSession(session: CardMatchSession): CardAppScreen {
   if (session.matchState.phase === "match_intro") return "patient_intro";
   if (session.matchState.phase === "match_complete") return "results";
@@ -221,6 +235,7 @@ export function buildCardAppModel(
             (condition) => condition.id === state.result?.correctConditionId,
           )?.displayName ?? "the hidden condition",
         explanation: content.educationalExplanation,
+        tieBreakLabel: tieBreakLabel(state.result.winningTieBreak),
         rankings: state.result.rankings.map((ranking) => {
           const player = state.players[ranking.playerId];
           const lastDiagnosis = player?.diagnosisSubmissions.at(-1);
@@ -299,13 +314,14 @@ export function buildCardAppModel(
             id: instance.instanceId,
             title: card?.displayName ?? "Investigation card",
             category: card?.category ?? "special",
+            visibility: card?.visibility ?? "private",
             description: card?.description ?? "Reveal another part of the mystery.",
             ...(card?.beginnerHint ? { beginnerHint: card.beginnerHint } : {}),
             selected: human.hand.selectedCardInstanceId === instance.instanceId,
             locked: human.hand.locked,
             disabled:
               state?.phase !== "card_selection" ||
-              human.finalDiagnosisSubmitted,
+              human.correctDiagnosisRound !== null,
           };
         }) ?? [],
       publicClues,
@@ -394,12 +410,31 @@ export function buildCardAppModel(
         human?.diagnosisLockedUntilRound !== null &&
         human?.diagnosisLockedUntilRound !== undefined &&
         (state?.currentRound ?? 0) < human.diagnosisLockedUntilRound,
-      humanHasDiagnosed: human?.finalDiagnosisSubmitted ?? false,
+      humanHasDiagnosed: human?.correctDiagnosisRound != null,
+      mustDiagnose:
+        state?.phase === "diagnosis_window" &&
+        state.currentRound >= state.maximumRounds &&
+        human !== undefined &&
+        human.correctDiagnosisRound === null &&
+        human.diagnosisAttemptsUsed < 2 &&
+        !human.diagnosisSubmissions.some(
+          (submission) => submission.round === state.currentRound,
+        ),
       canLock:
         state?.phase === "card_selection" &&
-        human?.finalDiagnosisSubmitted !== true,
+        human?.correctDiagnosisRound === null,
       canReveal: state?.phase === "cards_locked",
-      canAdvance: state?.phase === "diagnosis_window",
+      canAdvance:
+        state?.phase === "diagnosis_window" &&
+        !(
+          state.currentRound >= state.maximumRounds &&
+          human !== undefined &&
+          human.correctDiagnosisRound === null &&
+          human.diagnosisAttemptsUsed < 2 &&
+          !human.diagnosisSubmissions.some(
+            (submission) => submission.round === state.currentRound,
+          )
+        ),
       statusMessage: statusForMatch(state, human, statusMessage),
     },
     results,

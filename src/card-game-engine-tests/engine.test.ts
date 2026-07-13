@@ -79,7 +79,7 @@ function forceCard(
 function lockAllHumans(state: MatchState): MatchState {
   for (const playerId of state.playerOrder) {
     const player = state.players[playerId];
-    if (player?.kind !== "human" || player.finalDiagnosisSubmitted) {
+    if (player?.kind !== "human" || player.correctDiagnosisRound !== null) {
       continue;
     }
     const card = player.hand.cards[0];
@@ -109,6 +109,9 @@ function resolveAndOpenDiagnosis(state: MatchState): MatchState {
 }
 
 function advanceAndDraw(state: MatchState): MatchState {
+  if (state.currentRound >= state.maximumRounds) {
+    return state;
+  }
   state = run(state, { type: "CONTINUE_FROM_DIAGNOSIS" });
   if (state.phase === "match_complete") {
     return state;
@@ -143,6 +146,40 @@ const supportClues: [string, string] = [
   "clue.pain-started-central",
   "clue.pain-migrated-lower-right",
 ];
+
+function completeExactTie(
+  seed: string,
+  submissionOrder: [string, string],
+  players: MatchPlayerSetup[] = twoHumans,
+): MatchState {
+  let state = createCardMatch(content, {
+    seed,
+    matchId: `match.${seed}`,
+    players,
+  });
+  state.phase = "diagnosis_window";
+  state.currentRound = 2;
+  for (const playerId of state.playerOrder) {
+    const player = state.players[playerId];
+    if (player === undefined) continue;
+    player.privateClues.push({
+      clueId: "clue.pain-migrated-lower-right",
+      round: 2,
+      sourceId: "fixture",
+      visibility: "private",
+      playerId,
+    });
+  }
+  for (const playerId of submissionOrder) {
+    state = run(state, {
+      type: "SUBMIT_DIAGNOSIS",
+      playerId,
+      conditionId: content.correctConditionId,
+      clueIds: supportClues,
+    });
+  }
+  return state;
+}
 
 describe("seeded match creation and decks", () => {
   it("reproduces decks and the shared event for the same seed", () => {
@@ -351,6 +388,28 @@ describe("round state machine", () => {
     ).toEqual([]);
   });
 
+  it("credits every simultaneous contributor to the same new public clue", () => {
+    let state = startAndDraw("simultaneous-public-credit");
+    for (const playerId of state.playerOrder) {
+      const card = forceCard(state, playerId, "card.check.temperature");
+      state = run(state, {
+        type: "SELECT_CARD",
+        playerId,
+        cardInstanceId: card.instanceId,
+      });
+      state = run(state, { type: "LOCK_CARD", playerId });
+    }
+
+    state = run(state, { type: "RESOLVE_ROUND" });
+
+    expect(state.publicClues).toHaveLength(2);
+    expect(
+      state.playerOrder.map((playerId) =>
+        state.players[playerId]?.plays[0]?.revealedNewClue,
+      ),
+    ).toEqual([true, true]);
+  });
+
   it("draws back to three and removes played cards from hand", () => {
     let state = startAndDraw("draw-back");
     const played = state.players["player.one"]?.hand.cards[0];
@@ -370,9 +429,9 @@ describe("round state machine", () => {
   it("reveals exactly one seeded shared event on its authored round", () => {
     let state = startAndDraw("event-round");
     const authoredRound = state.sharedEvent.round;
-    while (state.phase !== "match_complete") {
+    for (let round = 1; round <= state.maximumRounds; round += 1) {
       state = resolveAndOpenDiagnosis(state);
-      if (state.phase !== "match_complete") {
+      if (round < state.maximumRounds) {
         state = advanceAndDraw(state);
       }
     }
@@ -391,7 +450,7 @@ describe("round state machine", () => {
       expect(state.phase).toBe("diagnosis_window");
       state = advanceAndDraw(state);
     }
-    expect(state.phase).toBe("match_complete");
+    expect(state.phase).toBe("diagnosis_window");
     expect(state.currentRound).toBe(4);
   });
 
@@ -487,6 +546,34 @@ describe("diagnosis and scoring", () => {
     });
     expect(state.players["player.one"]?.diagnosisAttemptsUsed).toBe(2);
     expect(state.players["player.one"]?.finalDiagnosisSubmitted).toBe(true);
+    state.phase = "card_selection";
+    const exhaustedPlayer = state.players["player.one"];
+    if (exhaustedPlayer === undefined) {
+      throw new Error("Missing exhausted player.");
+    }
+    const card = exhaustedPlayer?.deck.drawPile.shift();
+    if (card === undefined) {
+      throw new Error("Missing exhausted player's card.");
+    }
+    exhaustedPlayer.hand.cards.push(card);
+    state = run(state, {
+      type: "SELECT_CARD",
+      playerId: "player.one",
+      cardInstanceId: card.instanceId,
+    });
+    expect(state.players["player.one"]?.hand.selectedCardInstanceId).toBe(
+      card.instanceId,
+    );
+  });
+
+  it("requires an available final diagnosis before the match can finish", () => {
+    const state = diagnosisState(4);
+    const result = transitionCardGame(content, state, {
+      type: "CONTINUE_FROM_DIAGNOSIS",
+    });
+
+    expect(result.errors[0]?.code).toBe("DIAGNOSIS_REQUIRED");
+    expect(result.state.phase).toBe("diagnosis_window");
   });
 
   it("records a correct diagnosis and prevents resubmission", () => {
@@ -574,33 +661,39 @@ describe("diagnosis and scoring", () => {
     expect(score?.total).toBeLessThanOrEqual(1_000);
   });
 
-  it("uses shared placement when every score tie-breaker is equal", () => {
-    let state = diagnosisState();
-    const second = state.players["player.two"];
-    if (second === undefined) {
-      throw new Error("Missing second player.");
-    }
-    second.privateClues.push({
-      clueId: "clue.pain-migrated-lower-right",
-      round: 2,
-      sourceId: "fixture",
-      visibility: "private",
-      playerId: second.id,
-    });
-    state = run(state, {
-      type: "SUBMIT_DIAGNOSIS",
-      playerId: "player.one",
-      conditionId: content.correctConditionId,
-      clueIds: supportClues,
-    });
-    state = run(state, {
-      type: "SUBMIT_DIAGNOSIS",
-      playerId: "player.two",
-      conditionId: content.correctConditionId,
-      clueIds: supportClues,
-    });
-    expect(state.result?.rankings.map((entry) => entry.placement)).toEqual([1, 1]);
-    expect(state.result?.winnerPlayerIds).toEqual(["player.one", "player.two"]);
+  it("uses a deterministic seeded draw instead of sharing first place", () => {
+    const first = completeExactTie("ranking-draw", ["player.one", "player.two"]);
+    const replay = completeExactTie("ranking-draw", ["player.one", "player.two"]);
+
+    expect(first.result).toEqual(replay.result);
+    expect(first.result?.rankings.map((entry) => entry.placement)).toEqual([1, 2]);
+    expect(first.result?.winnerPlayerIds).toHaveLength(1);
+    expect(first.result?.winningTieBreak).toBe("seeded_mystery_draw");
+  });
+
+  it("does not use submission or player order to resolve an exact tie", () => {
+    const forward = completeExactTie("order-neutral", ["player.one", "player.two"]);
+    const reversed = completeExactTie(
+      "order-neutral",
+      ["player.two", "player.one"],
+      [...twoHumans].reverse(),
+    );
+
+    expect(reversed.result?.winnerPlayerIds).toEqual(forward.result?.winnerPlayerIds);
+    expect(reversed.result?.rankings.map((entry) => entry.playerId)).toEqual(
+      forward.result?.rankings.map((entry) => entry.playerId),
+    );
+  });
+
+  it("does not systematically favor either player across seeded exact ties", () => {
+    const winners = new Set(
+      Array.from({ length: 24 }, (_, index) =>
+        completeExactTie(`fair-draw-${index}`, ["player.one", "player.two"])
+          .result?.winnerPlayerIds[0],
+      ),
+    );
+
+    expect(winners).toEqual(new Set(["player.one", "player.two"]));
   });
 });
 
@@ -672,6 +765,8 @@ describe("balanced bot and player views", () => {
       playerId: "player.bot-balanced",
     });
     next = run(next, { type: "OPEN_DIAGNOSIS_WINDOW" });
+    expect(next.players["player.bot-balanced"]?.diagnosisSubmissions).toEqual([]);
+    next = run(next, { type: "CONTINUE_FROM_DIAGNOSIS" });
     const submission = next.players["player.bot-balanced"]
       ?.diagnosisSubmissions[0];
     expect(submission?.conditionId).toBe(content.correctConditionId);
@@ -681,6 +776,45 @@ describe("balanced bot and player views", () => {
         knownClueIdsForPlayer(next, "player.bot-balanced").includes(clueId),
       ),
     ).toBe(true);
+  });
+
+  it("lets the human decide before the bot without awarding first-player priority", () => {
+    let state = createCardMatch(content, {
+      seed: "human-first-diagnosis",
+      players: humanAndBot,
+    });
+    state.phase = "clue_review";
+    state.currentRound = 2;
+    for (const playerId of state.playerOrder) {
+      const player = state.players[playerId];
+      if (player === undefined) continue;
+      player.privateClues.push({
+        clueId: "clue.pain-migrated-lower-right",
+        round: 2,
+        sourceId: "fixture",
+        visibility: "private",
+        playerId,
+      });
+    }
+
+    state = run(state, { type: "OPEN_DIAGNOSIS_WINDOW" });
+    expect(state.players["player.bot-balanced"]?.diagnosisSubmissions).toEqual([]);
+    state = run(state, {
+      type: "SUBMIT_DIAGNOSIS",
+      playerId: "player.you",
+      conditionId: content.correctConditionId,
+      clueIds: supportClues,
+    });
+
+    expect(state.players["player.you"]?.score?.total).toBe(1_000);
+    expect(state.players["player.bot-balanced"]?.score?.total).toBe(1_000);
+    expect(state.result?.rankings.map((entry) => entry.placement)).toEqual([1, 2]);
+    expect(state.result?.winnerPlayerIds).toHaveLength(1);
+    const correctEvents = state.eventLog.filter(
+      (event) => event.type === "diagnosis_correct",
+    );
+    expect(correctEvents[0]?.relatedIds).toContain("player.you");
+    expect(correctEvents[1]?.relatedIds).toContain("player.bot-balanced");
   });
 
   it("does not expose opponent private clues or in-match scores in a player view", () => {

@@ -98,7 +98,7 @@ Randomness changes only the investigation path. Diagnosis truth, clue meaning, a
 
 A diagnosis is valid only after Round 2, for a match condition, with two distinct public or player-owned clues, while attempts remain and before a correct submission. The first wrong answer applies −150 and blocks another attempt until the next round. The second applies an additional −150 and exhausts attempts. Neither removes the player from the match.
 
-Score categories are correct diagnosis (500), legitimate supporting clues (up to 200), timing (150/100/50 after Round 2/3/4), efficient investigation (up to 100), and one achievement (50). Wrong penalties apply last; total score is clamped to 0–1,000. Ranking uses score, earlier correct round, fewer wrong attempts, more valid supporting clues, then shared placement.
+Score categories are correct diagnosis (500), legitimate supporting clues (up to 200), timing (150/100/50 after Round 2/3/4), efficient investigation (up to 100), and one achievement (50). Wrong penalties apply last; total score is clamped to 0–1,000. Ranking uses score, earlier correct round, fewer wrong attempts, then more valid supporting clues. An exact tie uses a deterministic seed-derived mystery draw, so first place is unique without rewarding submission or player order.
 
 ## Engine and session requirements
 

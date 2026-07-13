@@ -1,10 +1,38 @@
-# Meducktion Competitive Card Game Refactor
+# Meducktion Hidden-Identity Casual Game Refactor
 
 **Status:** Current product and architecture direction
 
-**Tagline:** *Reveal the clues. Solve the case. Outsmart the room.*
+**Tagline:** *Reveal. Deduce. Diagnose.*
 
 > **Medical disclaimer:** Meducktion is a fictional educational game. It is not medical advice, clinical training, or a diagnostic tool. Do not use it to make decisions about real patients.
+
+## Current default mode
+
+The default mode is now `identity-casual`. The previous 1,000-point investigation game remains isolated in the repository for possible future Advanced or Ranked work, but it is inactive and absent from the default interface.
+
+Each player receives a seeded, private Patient Identity and a separate seeded reveal deck. A central reveal button turns over one card per active player each round. The engine—not the player—places each card into that player's private YES or NO pile according to the authored identity matrix. After three reveals, players may risk one of three exact guesses or continue gathering evidence. The third wrong guess eliminates the player.
+
+The earliest correct round wins. All decisions in a round resolve simultaneously; submission order, seating order, animation speed, and network arrival order do not decide victory. Multiple correct players in the earliest round are co-winners. If every player is eliminated, the match ends without a winner. Casual mode calculates and displays no score.
+
+The standard screen emphasizes vague starting information, the central reveal action, the newest card, YES and NO piles, remaining guesses, a private identity board, opponent progress, and the guess decision. Light assist provides private Possible, Unlikely, and Eliminated markings. Full assist filters identities against the player's known YES/NO evidence; Off provides no deduction assistance.
+
+### Active content and validation
+
+`The Abdominal Mystery` is the initial tutorial-sized pack: 12 identities, 18 reveal cards, a complete strict boolean matrix, and a three-reveal guess threshold. Automated validation rejects missing non-boolean results, duplicate full signatures, identities with too little YES/NO variety, and cards that fail to divide the pool. Content remains `medicalReviewRequired`; simplified profiles are gameplay abstractions, not representations of real diagnostic certainty.
+
+The engine is data-driven and separate from case content. New packs require identities, reveal cards, a YES/NO matrix, explanations, and review rather than engine changes. Match seeds reproduce identity assignment and per-player deck order. Duplicate identities are disabled by default.
+
+### Current identity-mode limitations
+
+- The first pack is tutorial-sized rather than the planned 20–24 identity Standard pack.
+- Deck construction is seeded and strength-tiered with alternating YES/NO opportunities, but its deduction curve still needs statistical simulation and playtesting.
+- The local UI runs one human versus one Balanced bot. The engine supports 2–4 player definitions, but online transport and multi-device synchronization are not implemented.
+- Cosmetic achievements and illustrations are not yet included.
+- The recap exposes identities, guesses, and YES/NO evidence, but richer card-by-card educational explanations await professional content review.
+
+## Historical score-mode specification
+
+The remainder of this document describes the superseded score-mode implementation retained for a possible future advanced mode. It is not the current Casual ruleset.
 
 ## Why the gameplay changed
 
@@ -94,9 +122,9 @@ match_intro
 → match_complete
 ```
 
-Selection may change before locking and never reveals a clue. All active players must lock before resolution. Reveal applies card effects, places clues according to visibility, resolves the one shared event at its authored round, and draws active hands back to three. A diagnosed player remains present as a spectator while the short match finishes.
+Selection may change before locking and never reveals a clue. All active players must lock before resolution. Reveal applies card effects, places clues according to visibility, resolves the one shared event at its authored round, and draws active hands back to three. A player who diagnosed correctly remains present as a spectator. A player who used both attempts without solving the case keeps playing cards for discovery points, but cannot diagnose again.
 
-The match ends when all players have made final diagnoses or after the Round 4 final diagnosis window. Completion reveals correctness, private clues, investigation paths, scores, ranking, winner feedback, and a beginner-friendly educational explanation.
+The match ends when all players have diagnosed correctly or exhausted their attempts, or after every eligible player has made the required Round 4 final call. Completion reveals correctness, private clues, investigation paths, scores, ranking, winner feedback, and a beginner-friendly educational explanation.
 
 ## Diagnosis and scoring
 
@@ -112,7 +140,7 @@ The maximum score is 1,000:
 | Efficient investigation | 100 | Starts at 100; repeated no-new-clue or clearly irrelevant investigations subtract 20 each |
 | Special achievement | 50 | At most one authored achievement |
 
-Wrong-attempt penalties apply after category scoring, and the result is clamped to 0–1,000. Ties break by earlier correct round, fewer wrong attempts, then more valid supporting clues; players share placement if still tied. First to diagnose is not automatically the winner.
+Wrong-attempt penalties apply after category scoring, and the result is clamped to 0–1,000. Ranking compares correct diagnosis, total score, evidence score, earlier correct round, fewer wrong attempts, and more unique discoveries, in that order. If every skill-based measure is still identical, a deterministic mystery draw derived from the match seed chooses the unique first-place player. Submission order and player order never break the tie, so going first gives no ranking advantage. The result records and displays the criterion that actually decided first place.
 
 ## Local bot behavior
 
@@ -124,6 +152,7 @@ The local vertical slice uses one Balanced bot so a single browser can exercise 
 - Uses authored clue-support counts when deciding whether and what to diagnose.
 - Follows the same phase, clue, attempt, and timing validation as a human.
 - Uses the stored seed for deterministic tie-breaking.
+- Waits for the local human to diagnose or continue before making its diagnosis decision.
 
 The bot is a transparent test opponent, not a simulation of medical expertise or a complex AI system.
 
@@ -151,15 +180,48 @@ Resume must recreate the match exactly and reject corrupt or incompatible snapsh
 
 ## Future multiplayer boundary
 
-Firebase networking is deliberately outside this local refactor. The engine knows nothing about Firebase, browser clocks, presence, authentication, transport retries, or server timestamps. A future adapter may transmit validated commands and versioned snapshots, enforce expected revisions and command idempotency, manage rooms/presence, and expose reconnect state. It must not resolve cards, inspect private clues for unrelated players, choose bot actions, recalculate scores, or alter authored medical truth.
+### Multiplayer foundation implemented
 
-Before online play, the team must define authoritative server/security-rule boundaries for hidden information, concurrent locking, reconnects, host migration, and cheating resistance. Firebase, authentication, Cloud Functions, online rooms, and matchmaking are not implemented by this vertical slice.
+The first transport slice is now present under `src/firebase` and `src/multiplayer-room`. It adds lazy Firebase Web SDK configuration, anonymous sign-in, explicit Auth/Firestore emulator connections, six-character room codes, versioned lobby records, 2–4 member capacity, readiness, host-only start, expiry, real-time subscriptions, and transactional command submission. Room transitions reuse `CardMatchCommandEnvelope` and `applyCardMatchCommand`; Firebase does not select cards, reveal clues, validate diagnoses, run bots, or score matches.
+
+Firestore rules permit authenticated users to read a lobby in order to join, prohibit room listing, restrict initial creation to the authenticated host, cap membership, preserve pinned room fields, and deny nonmember reads after play begins. Emulator-backed rules tests are included separately from the normal Vitest suite. They require JDK 21 or newer because of the current Firebase CLI requirement.
+
+This slice is infrastructure, not a complete online UX. Create/join lobby screens, reconnect presentation, host migration, per-player private-state partitioning, and two-browser end-to-end testing remain next. The current full session snapshot is member-readable and therefore suitable only for casual private-room prototyping, not ranked cheat resistance.
+
+Firebase networking remains outside the engine. The engine knows nothing about Firebase, browser clocks, presence, authentication, transport retries, or server timestamps. The room adapter transmits validated commands and versioned snapshots and enforces expected revisions and command idempotency. It must not resolve cards, inspect private clues for unrelated players, choose bot actions, recalculate scores, or alter authored medical truth.
+
+Before wider online play, the team must finish authoritative security boundaries for hidden information, concurrent locking, reconnects, host migration, and cheating resistance. Cloud Functions and matchmaking are not implemented.
 
 ## First converted case
 
 `The Pain That Moved` retains Jordan Lee, age 20, and an authored appendicitis answer. The beginner answer set is Appendicitis, Stomach infection, Urinary infection, and Kidney stone. Plain-language clue cards adapt the validated history, movement of pain, appetite, diarrhea, lower-right tenderness, mild fever, blood, urine, and ultrasound findings. Detailed terms may appear only in optional reviewed explanations.
 
 Stable case and clue IDs remain unchanged unless a deliberate content migration is versioned and documented. The case remains fictional and requires medical review before public release.
+
+## Small polish pass
+
+The first post-playtest polish pass intentionally stayed in the presentation layer. Cards now state whether their clue will be shared or private before selection, and revealed clue rows repeat that visibility instead of relying only on board placement. The diagnosis control now uses round-aware wording, while the post-reveal area presents `Diagnose now` and `Keep investigating` as one clear decision. The tutorial mentions the free redraw and the recurring diagnose-or-continue choice. Results now summarize the human player's placement and diagnosis outcome immediately, with their score breakdown open by default.
+
+### Remaining playtest observations
+
+- The one-human/one-bot pacing should be tested with more first-time players, especially the transition from reveal to diagnosis.
+- Card and diagnosis-panel readability still needs hands-on checks at narrow mobile widths and high text zoom.
+- The current bot presentation is understandable but intentionally lightweight and may benefit from more personality after broader playtesting.
+
+### Future ideas not implemented
+
+No new game rules, cards, modes, medical systems, or gameplay randomness were added in the presentation polish pass. The later multiplayer foundation is documented separately above.
+
+## Recommended Core Rules v2 migration status
+
+The first safe v2 rules slice addresses fairness and match completion without replacing the current card loop:
+
+- Cards resolve as a simultaneous round for discovery credit. If multiple players reveal the same previously hidden public clue in that round, every contributor receives credit while the shared board stores the clue once.
+- Using the second diagnosis attempt no longer removes a player from card play. They continue investigating for discovery points.
+- An eligible player cannot skip the Round 4 final diagnosis. The interface directs them to make their call before completion.
+- First place is always unique. The engine records the actual ranking criterion, and the results screen explains it.
+
+Remaining v2 work is deliberately staged rather than folded into this narrow engine migration. A variable hidden diagnosis requires a fully authored and medically reviewed clue matrix for every possible outcome. Player-controlled keep/swap decisions, choice-driven event cards, weighted evidence, revised positive scoring, public Test cards, generic Tactics, bot strategy changes, and result-aware bad-luck protection remain unimplemented. Those changes affect content contracts, balance, tutorial copy, and saved-state compatibility and should be developed as a separately versioned slice with dedicated playtesting.
 
 ## Current limitations
 

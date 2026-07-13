@@ -1,8 +1,8 @@
 # Meducktion
 
-**Reveal the clues. Solve the case. Outsmart the room.**
+**Reveal. Deduce. Diagnose.**
 
-Meducktion is a beginner-friendly competitive medical mystery card game. Investigate the same fictional patient as your opponents, choose one card each round, collect public and private clues, and decide when you know enough to diagnose. The current local vertical slice plays one human against a deterministic bot; its framework-independent rules are designed for 2–4 players.
+Meducktion is a beginner-friendly hidden-identity medical deduction game. Every player has a different hidden patient identity. Reveal one symptom each round; the game automatically sorts it into your private YES or NO pile. Use both piles to eliminate possibilities, then risk one of three exact guesses before an opponent solves their patient. The current local vertical slice plays one human against a deterministic bot; its framework-independent rules support 2–4 players and simultaneous decisions.
 
 > **Medical disclaimer:** Meducktion is a fictional educational game. It is not medical advice, clinical training, or a diagnostic tool. Do not use it to make decisions about real patients.
 
@@ -15,7 +15,7 @@ npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite. `Play` starts a locally simulated match against a Balanced bot. Firebase networking, authentication, online rooms, and human-to-human multiplayer are not implemented.
+Open the local URL printed by Vite. `Play` starts the current local card match. A first online-room foundation now provides anonymous Firebase authentication, transactional Firestore room storage, lobby membership/readiness, and command synchronization behind the existing deterministic session boundary. The player-facing create/join lobby is not connected yet.
 
 ## Verify
 
@@ -26,9 +26,21 @@ npm run validate:cases
 npm run build
 ```
 
+## Multiplayer development
+
+Copy `.env.example` to `.env.local` and keep `VITE_FIREBASE_USE_EMULATORS=true` for local work. The demo project ID cannot reach production Firebase resources.
+
+```powershell
+npm run firebase:emulators
+npm run test:multiplayer
+npm run test:firebase-rules
+```
+
+The current Firebase CLI requires JDK 21 or newer for the Firestore emulator. Production credentials are not included in the repository.
+
 ## Current product documentation
 
-- [Competitive card-game refactor](docs/MEDUCKTION_CARD_GAME_REFACTOR.md)
+- [Identity-casual game refactor](docs/MEDUCKTION_CARD_GAME_REFACTOR.md)
 - [Product requirements](docs/CASE_SIGNAL_PRD.md)
 - [MVP specification](docs/CASE_SIGNAL_MVP.md)
 - [Case authoring guide](docs/CASE_SIGNAL_CASE_AUTHORING.md)

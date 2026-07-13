@@ -41,7 +41,7 @@ const tutorialPanels = [
   {
     eyebrow: "Choose wisely",
     title: "Play one card each round",
-    body: "Pick an Ask, Check, Test, or Special card from your hand. You can change your mind before locking it.",
+    body: "Pick an Ask, Check, Test, or Special card. You can change your mind before locking, and you get one free full-hand redraw per match.",
     symbol: "1",
   },
   {
@@ -53,7 +53,7 @@ const tutorialPanels = [
   {
     eyebrow: "Make your call",
     title: "Diagnose after Round 2",
-    body: "Choose one condition and two clues that shaped your decision. A wrong guess costs 150 points, but you keep playing.",
+    body: "After each reveal from Round 2 onward, diagnose or keep investigating. A wrong guess costs 150 points, but you keep playing.",
     symbol: "2",
   },
   {
@@ -189,14 +189,14 @@ function HomeScreen({
           ASK
         </div>
         <div className="art-card art-card-test" aria-hidden="true">
-          <span>\u2315</span>
+          <span>&#x2315;</span>
           TEST
         </div>
         <div className="art-sparkle sparkle-one" aria-hidden="true">
-          \u2726
+          &#x2726;
         </div>
         <div className="art-sparkle sparkle-two" aria-hidden="true">
-          \u2605
+          &#x2605;
         </div>
       </section>
     </main>
@@ -250,7 +250,7 @@ function SetupScreen({
           </select>
           <p className="field-note">
             This match uses one human and one deterministic bot. The rules are
-            ready for 2\u20134 players; online rooms come later.
+            ready for 2&ndash;4 players; online rooms come later.
           </p>
           <button
             className="button button-primary button-large button-wide"
@@ -268,11 +268,11 @@ function SetupScreen({
         <aside className="setup-summary" aria-label="Match summary">
           <div className="case-ticket">
             <span className="ticket-icon" aria-hidden="true">
-              \u2666
+              &#x2666;
             </span>
             <p>Tonight's mystery</p>
             <h2>{model.setup.selectedCaseName}</h2>
-            <span>Fictional case \u00b7 Beginner friendly</span>
+            <span>Fictional case &middot; Beginner friendly</span>
           </div>
           <div className="opponent-ticket">
             <div className="bot-avatar" aria-hidden="true">
@@ -310,7 +310,7 @@ function PatientIntro({
       />
       <section className="intro-stage">
         <div className="intro-portrait-wrap">
-          <p className="round-ribbon">Mystery case \u00b7 4 rounds</p>
+          <p className="round-ribbon">Mystery case &middot; 4 rounds</p>
           <PatientPortrait name={model.patient.displayName} large />
         </div>
         <div className="intro-story">
@@ -319,7 +319,7 @@ function PatientIntro({
           <p className="patient-meta">Age {model.patient.age}</p>
           <p className="story-card">{model.patient.shortStory}</p>
           <p className="starting-clue">
-            <span aria-hidden="true">\u2726</span>
+            <span aria-hidden="true">&#x2726;</span>
             <span>
               <small>Starting clue</small>
               <strong>{model.patient.startingSymptom}</strong>
@@ -359,15 +359,38 @@ function MatchScreen({
   const [diagnosisOpen, setDiagnosisOpen] = useState(false);
   const match = model.match;
   const selectedCard = match.hand.find((card) => card.selected);
+  const diagnosisLabel = match.humanHasDiagnosed
+    ? "Diagnosis submitted"
+    : match.diagnosisUnlocked
+      ? "Diagnose"
+      : match.round < 2
+        ? "Diagnose after Round 2"
+        : "Diagnose after reveal";
+  const roundDecisionMessage = match.mustDiagnose
+    ? "This is the final round. Choose a condition and two clues before finishing."
+    : match.humanHasDiagnosed
+    ? "Your diagnosis is locked in. Continue to see how the room finishes."
+    : match.diagnosisBlockedUntilNextRound
+      ? "Your next diagnosis attempt unlocks next round. Keep investigating."
+      : match.diagnosisUnlocked
+        ? "Call the case now for more timing points, or keep investigating."
+        : "Diagnosis unlocks after Round 2. Continue investigating for now.";
 
   return (
     <>
       <header className="match-header">
         <Brand compact />
         <RoundTracker round={match.round} maximum={match.maximumRounds} />
-        <button className="button button-header" onClick={onTutorial}>
-          Rules
-        </button>
+        <div className="match-header-actions">
+          <button className="button button-header" onClick={onTutorial}>Rules</button>
+          <button
+            className="button button-diagnose"
+            disabled={!match.diagnosisUnlocked || match.humanHasDiagnosed}
+            onClick={() => setDiagnosisOpen(true)}
+          >
+            {diagnosisLabel}
+          </button>
+        </div>
       </header>
       <nav className="match-jump-nav" aria-label="Match sections">
         <a href="#patient-card">Patient</a>
@@ -375,60 +398,66 @@ function MatchScreen({
         <a href="#player-hand">Your hand</a>
       </nav>
       <main id="meducktion-main" className="match-screen">
-        <section id="patient-card" className="match-top" aria-label="Patient and conditions">
-          <article className="patient-banner">
-            <PatientPortrait name={model.patient.displayName} />
-            <div>
-              <p className="playful-kicker">Today's mystery</p>
-              <h1>{model.patient.displayName}</h1>
-              <p>{model.patient.shortStory}</p>
-            </div>
-          </article>
-          <div className="compact-conditions">
-            <h2>Possible conditions</h2>
-            <ConditionGrid conditions={model.conditions} compact />
-          </div>
-          <aside className="event-slot" aria-label="Shared event">
-            <span aria-hidden="true">\u2605</span>
-            {match.sharedEvent ? (
-              <div>
-                <small>Shared event</small>
-                <strong>{match.sharedEvent.title}</strong>
-                <p>{match.sharedEvent.description}</p>
-              </div>
-            ) : (
-              <div>
-                <small>Shared event</small>
-                <strong>A surprise is coming</strong>
-                <p>One friendly twist will appear this match.</p>
-              </div>
-            )}
+        <section className="card-table" aria-label="Meducktion card table">
+          <aside className="opponent-seat" aria-labelledby="opponent-title">
+            <h2 id="opponent-title" className="visually-hidden">Opponent across the table</h2>
+            {match.opponents.map((opponent) => (
+              <article className="opponent-player" key={opponent.id}>
+                <span className="bot-avatar bot-avatar-large" aria-hidden="true">{opponent.avatar ?? "B"}</span>
+                <div className="opponent-identity">
+                  <strong>{opponent.displayName}</strong>
+                  <small>{opponent.styleLabel} opponent</small>
+                </div>
+                <span className={`status-pill status-${opponent.status}`}>
+                  {opponent.status === "locked" ? "Locked" : opponent.status === "diagnosed" ? "Diagnosed" : opponent.status === "reviewing" ? "Waiting" : "Choosing"}
+                </span>
+                <div className="opponent-card-backs" aria-label="Three face-down opponent cards">
+                  {[0, 1, 2].map((index) => <span className="card-back" key={index} aria-hidden="true"><i>M</i></span>)}
+                </div>
+              </article>
+            ))}
           </aside>
-        </section>
 
-        <div className="match-middle">
-          <section id="clue-board" className="clue-board" aria-labelledby="clue-title">
+          <div className="tabletop-layout">
+            <section className="table-conditions" aria-labelledby="table-condition-title">
+              <div className="table-section-title">
+                <span aria-hidden="true">?</span>
+                <div><small>The suspects</small><h2 id="table-condition-title">Possible conditions</h2></div>
+              </div>
+              <ConditionGrid conditions={model.conditions} compact />
+            </section>
+
+            <article id="patient-card" className="patient-table-center" aria-labelledby="patient-table-name">
+              <div className="patient-round-pips" aria-label={`Round ${match.round} of ${match.maximumRounds}`}>
+                {Array.from({ length: match.maximumRounds }, (_, index) => <span key={index} className={index < match.round ? "is-current" : ""}>{index + 1}</span>)}
+              </div>
+              <PatientPortrait name={model.patient.displayName} large />
+              <p className="playful-kicker">Patient at the table</p>
+              <h1 id="patient-table-name">{model.patient.displayName} <small>Age {model.patient.age}</small></h1>
+              <p className="patient-table-story">{model.patient.shortStory}</p>
+              <div className="patient-latest-clue">
+                <small>Current shared clue</small>
+                <strong>{match.publicClues.at(-1)?.title ?? model.patient.startingSymptom}</strong>
+              </div>
+              <aside className="event-card" aria-label="Shared event">
+                <span aria-hidden="true">&#x2605;</span>
+                <div><small>Shared event</small><strong>{match.sharedEvent?.title ?? "A surprise is coming"}</strong><p>{match.sharedEvent?.description ?? "One friendly twist will appear this match."}</p></div>
+              </aside>
+            </article>
+
+            <section id="clue-board" className="table-shared-clues" aria-labelledby="clue-title">
+              <div className="table-section-title">
+                <span aria-hidden="true">&#x2726;</span>
+                <div><small>On the table</small><h2 id="clue-title">Shared clues</h2></div>
+                <b className="count-pill">{match.publicClues.length}</b>
+              </div>
+              <ClueList clues={match.publicClues} empty="Shared clues will be placed here." />
+            </section>
+
+            <section className="reveal-table table-reveal-zone" aria-labelledby="reveal-title" aria-live="polite">
             <div className="section-heading compact-heading">
               <div>
-                <p className="playful-kicker">Room knowledge</p>
-                <h2 id="clue-title">Shared clue board</h2>
-              </div>
-              <span className="count-pill">{match.publicClues.length} found</span>
-            </div>
-            <ClueList clues={match.publicClues} empty="Play cards to reveal shared clues." />
-            <div className="private-clue-zone">
-              <div>
-                <h3>Your private clues</h3>
-                <span>Only you can read these during the match.</span>
-              </div>
-              <ClueList clues={match.privateClues} empty="No private clues yet." />
-            </div>
-          </section>
-
-          <section className="reveal-table" aria-labelledby="reveal-title" aria-live="polite">
-            <div className="section-heading compact-heading">
-              <div>
-                <p className="playful-kicker">Latest play</p>
+                <p className="playful-kicker">Center of the table</p>
                 <h2 id="reveal-title">Card reveal</h2>
               </div>
             </div>
@@ -452,42 +481,19 @@ function MatchScreen({
               </div>
             ) : (
               <div className="empty-reveal">
-                <span aria-hidden="true">\u21bb</span>
+                <span aria-hidden="true">&#x21bb;</span>
                 <p>Locked cards will flip here for everyone to see.</p>
               </div>
             )}
           </section>
-
-          <aside className="opponent-panel" aria-labelledby="opponent-title">
-            <h2 id="opponent-title">Around the room</h2>
-            {match.opponents.map((opponent) => (
-              <article className="opponent-row" key={opponent.id}>
-                <span className="bot-avatar" aria-hidden="true">
-                  {opponent.avatar ?? "B"}
-                </span>
-                <div>
-                  <strong>{opponent.displayName}</strong>
-                  <small>{opponent.styleLabel}</small>
-                </div>
-                <span className={`status-pill status-${opponent.status}`}>
-                  {opponent.status === "locked"
-                    ? "Card locked"
-                    : opponent.status === "diagnosed"
-                      ? "Diagnosis in"
-                      : opponent.status === "reviewing"
-                        ? "Reviewing clues"
-                        : "Choosing"}
-                </span>
-              </article>
-            ))}
-            <p className="privacy-note">
-              You can see an opponent's card category after reveal, but their
-              private clue stays hidden.
-            </p>
-          </aside>
-        </div>
+          </div>
+        </section>
 
         <section id="player-hand" className="hand-dock" aria-labelledby="hand-title">
+          <div className="private-clue-zone player-private-clues" aria-labelledby="private-clue-title">
+            <div><h3 id="private-clue-title">Your private clues</h3><span>Hidden from your opponent</span></div>
+            <ClueList clues={match.privateClues} empty="No private clues yet." />
+          </div>
           <div className="hand-heading">
             <div>
               <p className="playful-kicker">Round {match.round}</p>
@@ -503,17 +509,6 @@ function MatchScreen({
                 Redraw hand
                 <small>{match.redrawAvailable ? "1 free" : "Used"}</small>
               </button>
-              <button
-                className="button button-diagnose"
-                disabled={!match.diagnosisUnlocked || match.humanHasDiagnosed}
-                onClick={() => setDiagnosisOpen(true)}
-              >
-                {match.humanHasDiagnosed
-                  ? "Diagnosis submitted"
-                  : match.diagnosisUnlocked
-                    ? "Diagnose"
-                    : "Diagnose after Round 2"}
-              </button>
             </div>
           </div>
           {match.diagnosisBlockedUntilNextRound && (
@@ -523,7 +518,7 @@ function MatchScreen({
           )}
           {match.humanHasDiagnosed ? (
             <div className="spectator-card">
-              <span aria-hidden="true">\u2713</span>
+              <span aria-hidden="true">&#x2713;</span>
               <div>
                 <strong>Your diagnosis is in.</strong>
                 <p>Stay at the table to watch the remaining clues and final reveal.</p>
@@ -540,7 +535,7 @@ function MatchScreen({
               ))}
             </div>
           )}
-          <div className="match-actions">
+          {(match.canLock || match.canReveal) && <div className="match-actions">
             {match.canLock && (
               <button
                 className="button button-primary button-large"
@@ -555,12 +550,34 @@ function MatchScreen({
                 Reveal Cards
               </button>
             )}
-            {match.canAdvance && (
-              <button className="button button-primary button-large" onClick={actions.advanceRound}>
-                {match.round === match.maximumRounds ? "Finish Match" : "Next Round"}
-              </button>
-            )}
-          </div>
+          </div>}
+          {(match.canAdvance || match.mustDiagnose) && (
+            <section className="round-decision" aria-labelledby="round-decision-title">
+              <div>
+                <p className="playful-kicker">Your decision</p>
+                <h3 id="round-decision-title">The clues are in</h3>
+                <p>{roundDecisionMessage}</p>
+              </div>
+              <div className="round-decision-actions">
+                {match.diagnosisUnlocked && !match.humanHasDiagnosed && (
+                  <button
+                    className="button button-diagnose button-large"
+                    onClick={() => setDiagnosisOpen(true)}
+                  >
+                    Diagnose now
+                  </button>
+                )}
+                {!match.mustDiagnose && (
+                  <button
+                    className={`button button-large ${match.diagnosisUnlocked ? "button-cream" : "button-primary"}`}
+                    onClick={actions.advanceRound}
+                  >
+                    {match.round === match.maximumRounds ? "Finish Match" : "Keep investigating"}
+                  </button>
+                )}
+              </div>
+            </section>
+          )}
         </section>
       </main>
       <p className="visually-hidden" aria-live="polite">
@@ -581,7 +598,8 @@ function MatchScreen({
 }
 
 function InvestigationCard({ card, onToggle }: { card: CardView; onToggle: () => void }) {
-  const label = `${categoryLabels[card.category]} card: ${card.title}. ${card.description}${card.selected ? ". Selected" : ""}${card.locked ? ". Locked" : ""}`;
+  const visibilityLabel = card.visibility === "public" ? "Shared clue" : "Private clue";
+  const label = `${categoryLabels[card.category]} card: ${card.title}. ${visibilityLabel}. ${card.description}${card.selected ? ". Selected" : ""}${card.locked ? ". Locked" : ""}`;
   return (
     <button
       type="button"
@@ -597,11 +615,19 @@ function InvestigationCard({ card, onToggle }: { card: CardView; onToggle: () =>
         </span>
         {categoryLabels[card.category]}
       </span>
+      <span className="card-art" aria-hidden="true">
+        {card.icon ?? categoryIcons[card.category]}
+      </span>
       <span className="card-copy">
         <strong>{card.title}</strong>
         <span>{card.description}</span>
       </span>
+      <span className={`card-visibility visibility-${card.visibility}`}>
+        <span aria-hidden="true">{card.visibility === "public" ? "\u25ce" : "\u25c9"}</span>
+        {visibilityLabel}
+      </span>
       {card.beginnerHint && <small>{card.beginnerHint}</small>}
+      {card.locked && <span className="locked-badge">Locked</span>}
       <span className="card-select-label">
         {card.locked ? "Locked" : card.selected ? "Selected \u00b7 tap to change" : "Choose this card"}
       </span>
@@ -658,7 +684,7 @@ function DiagnosisPanel({
         aria-labelledby="diagnosis-title"
       >
         <button className="modal-close" type="button" onClick={onClose} aria-label="Close diagnosis panel">
-          \u00d7
+          &times;
         </button>
         <p className="playful-kicker">Make your call</p>
         <h2 id="diagnosis-title" ref={titleRef} tabIndex={-1}>
@@ -732,11 +758,19 @@ function ResultsScreen({ model, actions }: ScreenProps) {
   if (!results) {
     return (
       <main id="meducktion-main" className="page-shell results-screen">
-        <h1>Results are being counted\u2026</h1>
+        <h1>Results are being counted&hellip;</h1>
       </main>
     );
   }
   const human = results.rankings.find((player) => player.isHuman);
+  const firstPlaceCount = results.rankings.filter((player) => player.placement === 1).length;
+  const humanOutcome = human
+    ? human.placement === 1
+      ? firstPlaceCount > 1
+        ? "You shared first place."
+        : "You won the room."
+      : `You placed #${human.placement}.`
+    : "";
 
   return (
     <main id="meducktion-main" className="page-shell results-screen">
@@ -754,10 +788,20 @@ function ResultsScreen({ model, actions }: ScreenProps) {
           The hidden condition was <strong>{results.hiddenDiagnosisName}</strong>.
         </p>
         {human && (
-          <div className="human-score">
-            <span>Your score</span>
-            <strong>{human.totalScore}</strong>
-            <small>/ 1,000 points</small>
+          <div className="human-result-summary">
+            <p className={human.placement === 1 ? "human-outcome winner-outcome" : "human-outcome"}>
+              <strong>{humanOutcome}</strong>
+              <span>
+                {human.diagnosisCorrect
+                  ? `Your ${human.diagnosisName} diagnosis was correct.`
+                  : "Your final diagnosis did not solve this case."}
+              </span>
+            </p>
+            <div className="human-score">
+              <span>Your score</span>
+              <strong>{human.totalScore}</strong>
+              <small>/ 1,000 points</small>
+            </div>
           </div>
         )}
       </section>
@@ -768,6 +812,9 @@ function ResultsScreen({ model, actions }: ScreenProps) {
             <h2 id="ranking-title">Player rankings</h2>
           </div>
         </div>
+        <p className="tie-break-note">
+          Winner decided by: <strong>{results.tieBreakLabel}</strong>.
+        </p>
         <div className="rank-list">
           {results.rankings.map((player) => (
             <article className={`rank-card${player.placement === 1 ? " rank-winner" : ""}`} key={player.playerId}>
@@ -777,7 +824,7 @@ function ResultsScreen({ model, actions }: ScreenProps) {
               <div className="rank-name">
                 <strong>{player.displayName}{player.isHuman ? " (you)" : ""}</strong>
                 <span className={player.diagnosisCorrect ? "correct-label" : "incorrect-label"}>
-                  {player.diagnosisName} \u00b7 {player.diagnosisCorrect ? "Correct" : "Not solved"}
+                  {player.diagnosisName} &middot; {player.diagnosisCorrect ? "Correct" : "Not solved"}
                 </span>
               </div>
               <strong className="rank-total">{player.totalScore}</strong>
@@ -819,7 +866,7 @@ function ResultsScreen({ model, actions }: ScreenProps) {
 function ScoreDetails({ player }: { player: NonNullable<CardAppModel["results"]>["rankings"][number] }) {
   const score = player.breakdown;
   return (
-    <details className="score-details">
+    <details className="score-details" open={player.isHuman}>
       <summary>Score details</summary>
       <dl>
         <div><dt>Correct diagnosis</dt><dd>{score.correctDiagnosis}</dd></div>
@@ -829,7 +876,7 @@ function ScoreDetails({ player }: { player: NonNullable<CardAppModel["results"]>
         <div><dt>Achievement</dt><dd>{score.achievement}</dd></div>
         <div><dt>Wrong-attempt penalties</dt><dd>{score.wrongAttemptPenalties}</dd></div>
       </dl>
-      {player.achievementName && <p className="achievement-chip">\u2605 {player.achievementName}</p>}
+      {player.achievementName && <p className="achievement-chip">&#x2605; {player.achievementName}</p>}
     </details>
   );
 }
@@ -892,7 +939,7 @@ function PageHeader({
   return (
     <header className="page-header">
       <button className="button button-header" onClick={onBack}>
-        \u2190 {backLabel}
+        &larr; {backLabel}
       </button>
       <Brand compact />
       <button className="button button-header" onClick={onTutorial}>
@@ -928,6 +975,7 @@ function ConditionGrid({ conditions, compact = false }: { conditions: CardAppMod
           <span className="condition-number" aria-hidden="true">{index + 1}</span>
           <span className="condition-icon" aria-hidden="true">{condition.icon ?? "?"}</span>
           <strong>{condition.displayName}</strong>
+          {compact && condition.learnMore && <p className="condition-description">{condition.learnMore}</p>}
           {!compact && condition.learnMore && (
             <details>
               <summary>Learn more</summary>
@@ -946,12 +994,17 @@ function ClueList({ clues, empty }: { clues: readonly ClueView[]; empty: string 
     <ul className="clue-list">
       {clues.map((clue) => (
         <li className={clue.isNew ? "is-new" : ""} key={clue.id}>
-          <span aria-hidden="true">\u2726</span>
+          <span aria-hidden="true">&#x2726;</span>
           <div>
             <strong>{clue.title}</strong>
             {clue.explanation && <small>{clue.explanation}</small>}
           </div>
-          {clue.isNew && <span className="new-label">New</span>}
+          <span className="clue-meta">
+            <span className={`clue-visibility visibility-${clue.visibility}`}>
+              {clue.visibility === "public" ? "Shared with room" : "Private to you"}
+            </span>
+            {clue.isNew && <span className="new-label">New</span>}
+          </span>
         </li>
       ))}
     </ul>

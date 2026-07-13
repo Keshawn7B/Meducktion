@@ -16,6 +16,7 @@ export interface CardView {
   readonly id: string;
   readonly title: string;
   readonly category: CardCategory;
+  readonly visibility: "public" | "private";
   readonly description: string;
   readonly icon?: string;
   readonly beginnerHint?: string;
@@ -117,6 +118,7 @@ export interface CardAppModel {
     readonly diagnosisAttemptsRemaining: number;
     readonly diagnosisBlockedUntilNextRound: boolean;
     readonly humanHasDiagnosed: boolean;
+    readonly mustDiagnose: boolean;
     readonly canLock: boolean;
     readonly canReveal: boolean;
     readonly canAdvance: boolean;
@@ -126,6 +128,7 @@ export interface CardAppModel {
     readonly winnerName: string;
     readonly hiddenDiagnosisName: string;
     readonly explanation: string;
+    readonly tieBreakLabel: string;
     readonly rankings: readonly PlayerResultView[];
   } | null;
 }

@@ -43,6 +43,7 @@ function model(screen: CardAppModel["screen"], patch?: Partial<CardAppModel["mat
           id: "card.ask.pain-move",
           title: "Did the pain move?",
           category: "ask",
+          visibility: "private",
           description: "Ask Jordan how the pain changed.",
           selected: false,
           locked: false,
@@ -52,6 +53,7 @@ function model(screen: CardAppModel["screen"], patch?: Partial<CardAppModel["mat
           id: "card.check.abdomen",
           title: "Examine the abdomen",
           category: "check",
+          visibility: "private",
           description: "Gently check where it feels tender.",
           selected: true,
           locked: false,
@@ -61,6 +63,7 @@ function model(screen: CardAppModel["screen"], patch?: Partial<CardAppModel["mat
           id: "card.test.blood",
           title: "Blood test",
           category: "test",
+          visibility: "public",
           description: "Look for a simple sign of inflammation.",
           selected: false,
           locked: false,
@@ -117,6 +120,7 @@ function model(screen: CardAppModel["screen"], patch?: Partial<CardAppModel["mat
       diagnosisAttemptsRemaining: 2,
       diagnosisBlockedUntilNextRound: false,
       humanHasDiagnosed: false,
+      mustDiagnose: false,
       canLock: true,
       canReveal: false,
       canAdvance: false,
@@ -145,6 +149,18 @@ function actions(): CardAppActions {
 }
 
 describe("competitive card-game UI", () => {
+  it("renders symbols instead of raw unicode escape codes", () => {
+    const calls = actions();
+    const { container, rerender } = render(
+      <CardApp model={model("home")} actions={calls} />,
+    );
+
+    for (const currentScreen of ["setup", "patient_intro", "match"] as const) {
+      rerender(<CardApp model={model(currentScreen)} actions={calls} />);
+      expect(container.textContent).not.toMatch(/\\u[0-9a-f]{4}/i);
+    }
+  });
+
   it("presents the new home experience and prominent disclaimer", () => {
     render(<CardApp model={model("home")} actions={actions()} />);
     expect(screen.getByText(MEDUCKTION_TAGLINE)).toBeInTheDocument();
@@ -202,7 +218,11 @@ describe("competitive card-game UI", () => {
     render(<CardApp model={model("match")} actions={calls} />);
     const cards = screen.getAllByRole("button", { name: /card:/i });
     expect(cards).toHaveLength(3);
-    expect(screen.getByRole("button", { name: /Check card: Examine the abdomen.*Selected/i })).toHaveAttribute("aria-pressed", "true");
+    expect(cards[0]?.parentElement).toHaveClass("card-hand");
+    expect(cards.every((card) => card.classList.contains("investigation-card"))).toBe(true);
+    expect(screen.getAllByText("Private clue")).toHaveLength(2);
+    expect(screen.getByText("Shared clue")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Check card: Examine the abdomen.*Selected/i })).toHaveClass("is-selected");
     await user.click(screen.getByRole("button", { name: /Ask card: Did the pain move/i }));
     expect(calls.toggleCard).toHaveBeenCalledWith("card.ask.pain-move");
     await user.click(screen.getByRole("button", { name: "Lock Card" }));
@@ -211,11 +231,28 @@ describe("competitive card-game UI", () => {
 
   it("keeps public, private, and opponent-hidden clues distinct", () => {
     render(<CardApp model={model("match")} actions={actions()} />);
-    expect(screen.getByRole("heading", { name: "Shared clue board" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Shared clues" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Your private clues" })).toBeInTheDocument();
+    expect(screen.getAllByText("Shared with room").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Private to you").length).toBeGreaterThan(0);
     expect(screen.getByText("Jordan has little appetite.")).toBeInTheDocument();
     expect(screen.getByText("Private clue collected")).toBeInTheDocument();
-    expect(screen.getByText(/opponent's card category/i)).toBeInTheDocument();
+    expect(screen.getByLabelText("Three face-down opponent cards").children).toHaveLength(3);
+    expect(screen.getByLabelText("Meducktion card table")).toBeInTheDocument();
+  });
+
+  it("shows a visible locked state without removing the hand", () => {
+    const base = model("match");
+    const lockedHand = base.match.hand.map((card) => ({
+      ...card,
+      locked: card.selected,
+      disabled: true,
+    }));
+    render(<CardApp model={model("match", { hand: lockedHand, canLock: false, canReveal: true, phase: "cards_locked" })} actions={actions()} />);
+    expect(screen.getAllByRole("button", { name: /card:/i })).toHaveLength(3);
+    expect(screen.getByRole("button", { name: /Examine the abdomen.*Locked/i })).toHaveClass("is-locked");
+    expect(screen.getAllByText("Locked").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Reveal Cards" })).toBeInTheDocument();
   });
 
   it("emits redraw and reveal lifecycle actions", async () => {
@@ -238,6 +275,14 @@ describe("competitive card-game UI", () => {
       <CardApp model={model("match", { diagnosisUnlocked: false, round: 1 })} actions={calls} />,
     );
     expect(screen.getByRole("button", { name: "Diagnose after Round 2" })).toBeDisabled();
+
+    rerender(
+      <CardApp
+        model={model("match", { diagnosisUnlocked: false, round: 3 })}
+        actions={calls}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Diagnose after reveal" })).toBeDisabled();
 
     rerender(<CardApp model={model("match")} actions={calls} />);
     await user.click(screen.getByRole("button", { name: "Diagnose" }));
@@ -269,6 +314,7 @@ describe("competitive card-game UI", () => {
         winnerName: "Alex",
         hiddenDiagnosisName: "Appendicitis",
         explanation: "The moving pain, loss of appetite, and lower-right tenderness fit this fictional case.",
+        tieBreakLabel: "Seeded mystery draw",
         rankings: [
           {
             playerId: "player.human",
@@ -293,16 +339,16 @@ describe("competitive card-game UI", () => {
             playerId: "player.bot",
             displayName: "Bailey",
             placement: 2,
-            totalScore: 650,
+            totalScore: 950,
             diagnosisName: "Appendicitis",
             diagnosisCorrect: true,
             breakdown: {
               correctDiagnosis: 500,
-              supportingClues: 100,
-              timing: 50,
+              supportingClues: 200,
+              timing: 100,
               efficiency: 100,
-              achievement: 0,
-              wrongAttemptPenalties: -100,
+              achievement: 50,
+              wrongAttemptPenalties: 0,
             },
             investigationPath: ["Blood test", "Urine test"],
             isHuman: false,
@@ -313,8 +359,13 @@ describe("competitive card-game UI", () => {
     const calls = actions();
     render(<CardApp model={resultModel} actions={calls} />);
     expect(screen.getByRole("heading", { name: "Alex wins the room!" })).toBeInTheDocument();
-    expect(screen.getAllByText("950")).toHaveLength(2);
-    await user.click(screen.getAllByText("Score details")[0]!);
+    expect(screen.getByText("You won the room.")).toBeInTheDocument();
+    expect(screen.getByText("Your Appendicitis diagnosis was correct.")).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/\\u[0-9a-f]{4}/i);
+    expect(screen.getAllByText("950")).toHaveLength(3);
+    expect(screen.getByText(/seeded mystery draw/i)).toBeInTheDocument();
+    expect(screen.getByText(/Winner decided by/i)).toBeInTheDocument();
+    expect(screen.getAllByText("Score details")[0]?.closest("details")).toHaveAttribute("open");
     expect(screen.getAllByText("Correct diagnosis")).toHaveLength(2);
     expect(screen.getByRole("heading", { name: "Investigation paths" })).toBeInTheDocument();
     expect(screen.getByText(/moving pain, loss of appetite/i)).toBeInTheDocument();
