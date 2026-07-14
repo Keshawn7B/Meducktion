@@ -1,6 +1,7 @@
 node_modules/
 coverage/
 dist/
+.vite/
 firestore-debug.log
 ui-debug.log
 *.tsbuildinfo
