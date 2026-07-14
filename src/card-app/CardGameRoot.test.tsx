@@ -30,8 +30,8 @@ describe("player-facing card table", () => {
   it("mounts the active card controller into the tabletop screen", async () => {
     await openMatch();
     expect(screen.getByLabelText("Meducktion card table")).toBeInTheDocument();
-    expect(document.querySelector('img[src="/assets/patient-jordan-lee.webp"]')).toBeInTheDocument();
-    expect(document.querySelector('img[src="/assets/opponent-dr-beak.webp"]')).toBeInTheDocument();
+    expect(document.querySelector('img[src$="/assets/patient-jordan-lee.webp"]')).toBeInTheDocument();
+    expect(document.querySelector('img[src$="/assets/opponent-dr-beak.webp"]')).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /card:/i })).toHaveLength(3);
     expect(screen.getByLabelText("Three face-down opponent cards").children).toHaveLength(3);
     expect(localStorage.getItem(CARD_MATCH_STORAGE_KEY)).toContain('"phase":"card_selection"');
