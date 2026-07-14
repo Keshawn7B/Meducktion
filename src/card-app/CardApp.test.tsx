@@ -165,6 +165,8 @@ describe("competitive card-game UI", () => {
     render(<CardApp model={model("home")} actions={actions()} />);
     expect(screen.getByText(MEDUCKTION_TAGLINE)).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 1, name: "Meducktion" })).toBeInTheDocument();
+    expect(document.querySelector(".brand-wordmark")).toBeInTheDocument();
+    expect(document.querySelector(".brand-mark")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "Solve the case before your opponents." })).toBeInTheDocument();
     expect(screen.getByText(MEDUCKTION_DISCLAIMER)).toBeInTheDocument();
     expect(screen.queryByText(/care budget|stability|focus points/i)).not.toBeInTheDocument();

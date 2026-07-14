@@ -142,10 +142,7 @@ function Brand({
     <div
       className={`meducktion-brand${compact ? " brand-compact" : ""}${hero ? " brand-hero" : ""}`}
     >
-      <span className="brand-mark" aria-hidden="true">
-        <span>m</span>
-      </span>
-      <span>
+      <span className="brand-wordmark">
         {title}
         {!compact && <small>{MEDUCKTION_TAGLINE}</small>}
       </span>
