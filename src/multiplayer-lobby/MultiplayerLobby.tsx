@@ -78,7 +78,7 @@ export function MultiplayerLobby({ model, actions, onExit }: MultiplayerLobbyPro
             <span aria-hidden="true">m</span>
             <strong>Meducktion</strong>
           </div>
-          <span className="lobby-live-badge">Live waiting room</span>
+          <span className="lobby-live-badge">Online lobby</span>
         </header>
 
         {model.errorMessage && (
@@ -91,17 +91,17 @@ export function MultiplayerLobby({ model, actions, onExit }: MultiplayerLobbyPro
         {model.screen === "entry" && (
           <section className="lobby-entry">
             <div className="lobby-intro">
-              <p className="playful-kicker">Bring your boldest armchair experts</p>
-              <h1 id="lobby-title">Pull up a chair. The symptoms are getting weird.</h1>
-              <p>Open a private waiting room or enter a friend's six-character secret knock. No account, clipboard, or white coat required.</p>
+              <p className="playful-kicker">Online multiplayer</p>
+              <h1 id="lobby-title">Create or join a private room</h1>
+              <p>Create a room or enter a six-character code from a friend. No account is required.</p>
               <label htmlFor={nameId}>Your display name</label>
               <input id={nameId} value={displayName} maxLength={24} onChange={(event) => setDisplayName(event.target.value)} />
             </div>
             <div className="lobby-entry-cards">
               <form className="lobby-choice-card create-room-card" onSubmit={create}>
                 <span className="lobby-choice-icon" aria-hidden="true">+</span>
-                <h2>Open a waiting room</h2>
-                <p>Set out the cards, then send your crew the secret knock.</p>
+                <h2>Create a room</h2>
+                <p>Start a new room and share its code.</p>
                 <label htmlFor="lobby-capacity">Seats</label>
                 <select id="lobby-capacity" value={maximumPlayers} onChange={(event) => setMaximumPlayers(Number(event.target.value) as 2 | 3 | 4)}>
                   <option value={2}>2 players</option>
@@ -114,8 +114,8 @@ export function MultiplayerLobby({ model, actions, onExit }: MultiplayerLobbyPro
               </form>
               <form className="lobby-choice-card join-room-card" onSubmit={join}>
                 <span className="lobby-choice-icon" aria-hidden="true">#</span>
-                <h2>Crash a waiting room</h2>
-                <p>Enter the secret knock from the host's screen.</p>
+                <h2>Join a room</h2>
+                <p>Enter the code shown on the host's screen.</p>
                 <label htmlFor={codeId}>Room code</label>
                 <input id={codeId} className="room-code-input" value={roomCode} maxLength={6} autoCapitalize="characters" autoComplete="off" inputMode="text" onChange={(event) => setRoomCode(event.target.value.toUpperCase().replace(/[^A-HJ-NP-Z2-9]/g, "").slice(0, 6))} placeholder="ABC234" aria-describedby={`${codeId}-hint`} />
                 <small id={`${codeId}-hint`} className="room-code-hint">Six letters or numbers. Codes never use 0, 1, I, or O.</small>
@@ -131,15 +131,15 @@ export function MultiplayerLobby({ model, actions, onExit }: MultiplayerLobbyPro
           <section className="lobby-room">
             <div className="room-code-panel">
               <span className="lobby-connected" role="status"><i aria-hidden="true" /> Connected</span>
-              <p>Secret knock</p>
+              <p>Invite code</p>
               <strong aria-label={`Room code ${model.roomCode}`}>{model.roomCode}</strong>
               <button className="button button-small" onClick={() => void copyCode()} aria-live="polite">{copied ? "Copied!" : "Copy Code"}</button>
             </div>
             <div className="lobby-table-card">
               <div>
-                <p className="playful-kicker">The Pain That Moved &middot; zero actual paperwork</p>
-                <h1 id="lobby-title">The waiting room is filling with opinions</h1>
-                <p>{model.members.length} of {model.maximumPlayers} suspicious characters seated</p>
+                <p className="playful-kicker">The Pain That Moved</p>
+                <h1 id="lobby-title">Players in this room</h1>
+                <p>{model.members.length} of {model.maximumPlayers} seats filled</p>
               </div>
               <ol className="lobby-member-list" aria-label="Room players">
                 {model.members.map((member, index) => (
@@ -150,13 +150,13 @@ export function MultiplayerLobby({ model, actions, onExit }: MultiplayerLobbyPro
                   </li>
                 ))}
                 {Array.from({ length: model.maximumPlayers - model.members.length }, (_, index) => (
-                  <li className="empty-seat" key={`empty-${index}`}><span className="member-avatar" aria-hidden="true">?</span><span><strong>Unclaimed chair</strong><small>Awaiting another loud opinion</small></span></li>
+                  <li className="empty-seat" key={`empty-${index}`}><span className="member-avatar" aria-hidden="true">?</span><span><strong>Open seat</strong><small>Waiting for a player</small></span></li>
                 ))}
               </ol>
               <div className="lobby-room-actions">
                 {model.isHost ? (
                   <>
-                    <p>{model.canStart ? "All detectives are pretending to be ready." : "Share the secret knock and wait for every detective to settle in."}</p>
+                    <p>{model.canStart ? "Everyone is ready." : "Share the code and wait for every player to be ready."}</p>
                     <button className="button button-primary button-large" disabled={!model.canStart || model.busy} onClick={() => void actions.startLobby()}>{model.operation === "start" ? "Starting..." : "Start Match"}</button>
                   </>
                 ) : (
@@ -173,8 +173,8 @@ export function MultiplayerLobby({ model, actions, onExit }: MultiplayerLobbyPro
           <section className="lobby-ready-panel">
             <span className="ready-check" aria-hidden="true">✓</span>
             <p className="playful-kicker">Room {model.roomCode}</p>
-            <h1 id="lobby-title">Every chair is warm and every opinion is ready</h1>
-            <p>The waiting room is locked. The multiplayer match table is the next bit of medical mischief.</p>
+            <h1 id="lobby-title">The room is ready</h1>
+            <p>The lobby is locked and ready. Live match synchronization is the next multiplayer step.</p>
             <button className="button button-cream button-large" onClick={onExit}>Return Home</button>
           </section>
         )}

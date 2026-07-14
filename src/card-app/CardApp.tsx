@@ -42,33 +42,33 @@ const opponentPortraits: Record<string, string> = {
 
 const tutorialPanels = [
   {
-    eyebrow: "One patient, many opinions",
-    title: "Everybody gets the same weird case",
-    body: "You and your opponents meet one fictional patient and eye the same four suspicious conditions.",
+    eyebrow: "One shared case",
+    title: "Review the same fictional case",
+    body: "You and your opponents meet one patient and consider the same four possible conditions.",
     symbol: "4",
   },
   {
-    eyebrow: "Choose your trouble",
+    eyebrow: "Choose carefully",
     title: "Play one card each round",
-    body: "Pick an Ask, Check, Test, or Special card. You may change your mind before locking, and one full-hand do-over is on the house.",
+    body: "Pick an Ask, Check, Test, or Special card. You can change your selection before locking and redraw your full hand once per match.",
     symbol: "1",
   },
   {
-    eyebrow: "Follow the oddities",
-    title: "Every card makes the plot wobble",
-    body: "Some clues land where everyone can see them. Others sneak into your private stash and give you a secret route to the answer.",
+    eyebrow: "Follow the evidence",
+    title: "Cards reveal clues",
+    body: "Some clues are shared with everyone. Others remain private and give you a different path to the answer.",
     symbol: "?",
   },
   {
-    eyebrow: "Put on your serious face",
+    eyebrow: "Make your diagnosis",
     title: "Diagnose after Round 2",
-    body: "After each reveal from Round 2 onward, call the case or keep snooping. A wrong guess costs 150 points, but nobody confiscates your magnifying glass.",
+    body: "After each reveal from Round 2 onward, diagnose or keep investigating. A wrong diagnosis costs 150 points, but you can continue playing.",
     symbol: "2",
   },
   {
-    eyebrow: "Rule the waiting room",
+    eyebrow: "Win the match",
     title: "Highest score wins",
-    body: "Earn points for the right diagnosis, useful evidence, sharp timing, and resisting the urge to investigate absolutely everything.",
+    body: "Earn points for a correct diagnosis, supporting clues, good timing, and efficient investigation.",
     symbol: "1K",
   },
 ] as const;
@@ -168,12 +168,12 @@ function HomeScreen({
       <section className="home-copy" aria-labelledby="home-title">
         <Brand hero />
         <p className="playful-kicker">
-          A cozy card mystery with highly suspicious symptoms
+          A competitive medical deduction card game
         </p>
-        <h2 className="home-hook">Outwit the clues. Outsmart the quacks.</h2>
+        <h2 className="home-hook">Solve the case before your opponents.</h2>
         <p className="home-lede">
-          Ask awkward questions, run cartoonishly serious tests, and call the
-          case before another armchair expert does. No medical experience needed.
+          Play investigation cards, uncover clues, and decide when you have
+          enough evidence to diagnose. No medical experience is needed.
         </p>
         <div className="home-actions">
           <button
@@ -256,9 +256,9 @@ function SetupScreen({
       />
       <div className="setup-grid">
         <section className="paper-panel setup-panel" aria-labelledby="setup-title">
-          <p className="playful-kicker">Waiting-room roll call</p>
-          <h1 id="setup-title">Name badge on. Game face questionable.</h1>
-          <p>One baffled patient. Four quick rounds. May the sharpest snoop win.</p>
+          <p className="playful-kicker">Local match setup</p>
+          <h1 id="setup-title">Set up your match</h1>
+          <p>One fictional case. Four rounds. Highest score wins.</p>
           <label className="field-label" htmlFor={nameId}>
             Your player name
           </label>
@@ -300,24 +300,24 @@ function SetupScreen({
             <span className="ticket-icon" aria-hidden="true">
               &#x2666;
             </span>
-            <p>Tonight's medical mischief</p>
+            <p>Selected case</p>
             <h2>{model.setup.selectedCaseName}</h2>
-            <span>Entirely fictional &middot; Friendly to curious humans</span>
+            <span>Fictional case &middot; Beginner friendly</span>
           </div>
           <div className="opponent-ticket">
             <div className="bot-avatar" aria-hidden="true">
               <img src={opponentPortraits[model.setup.opponentName]} alt="" />
             </div>
             <div>
-              <p>Your suspiciously confident rival</p>
+              <p>Your opponent</p>
               <h2>{model.setup.opponentName}</h2>
-              <span>{model.setup.opponentStyle} bot instincts</span>
+              <span>{model.setup.opponentStyle} bot</span>
             </div>
           </div>
           <ol className="micro-rules" aria-label="Short rules summary">
-            <li>Pick one piece of trouble each round.</li>
-            <li>Use the oddities to narrow four suspects.</li>
-            <li>Call the case after Round 2 for timing points.</li>
+            <li>Choose one card each round.</li>
+            <li>Use clues to narrow four conditions.</li>
+            <li>Diagnose after Round 2 for timing points.</li>
           </ol>
         </aside>
       </div>
@@ -340,18 +340,18 @@ function PatientIntro({
       />
       <section className="intro-stage">
         <div className="intro-portrait-wrap">
-          <p className="round-ribbon">Case file escaped &middot; 4 rounds</p>
+          <p className="round-ribbon">Fictional case &middot; 4 rounds</p>
           <PatientPortrait name={model.patient.displayName} large />
         </div>
         <div className="intro-story">
-          <p className="playful-kicker">Meet the human plot twist</p>
+          <p className="playful-kicker">Meet the patient</p>
           <h1>{model.patient.displayName}</h1>
           <p className="patient-meta">Age {model.patient.age}</p>
           <p className="story-card">{model.patient.shortStory}</p>
           <p className="starting-clue">
             <span aria-hidden="true">&#x2726;</span>
             <span>
-              <small>The first oddity</small>
+              <small>Starting clue</small>
               <strong>{model.patient.startingSymptom}</strong>
             </span>
           </p>
@@ -360,10 +360,10 @@ function PatientIntro({
       <section className="condition-section" aria-labelledby="condition-title">
         <div className="section-heading">
           <div>
-            <p className="playful-kicker">The usual suspects</p>
-            <h2 id="condition-title">Which condition is causing the commotion?</h2>
+            <p className="playful-kicker">Possible conditions</p>
+            <h2 id="condition-title">Which condition best explains the clues?</h2>
           </div>
-          <p>No need to know them yet. The cards do the awkward questioning.</p>
+          <p>You do not need to know them yet. The cards will provide evidence.</p>
         </div>
         <ConditionGrid conditions={model.conditions} />
       </section>
@@ -374,7 +374,7 @@ function PatientIntro({
         >
           Deal Cards
         </button>
-        <span>Three suspiciously helpful cards are waiting in your first hand.</span>
+        <span>Three cards are waiting in your first hand.</span>
       </div>
       <Disclaimer />
     </main>
@@ -424,8 +424,8 @@ function MatchScreen({
       </header>
       <nav className="match-jump-nav" aria-label="Match sections">
         <a href="#patient-card">Patient</a>
-        <a href="#clue-board">Clue pile</a>
-        <a href="#player-hand">Your cards</a>
+        <a href="#clue-board">Clues</a>
+        <a href="#player-hand">Your hand</a>
       </nav>
       <main id="meducktion-main" className="match-screen">
         <section className="card-table" aria-label="Meducktion card table">
@@ -456,7 +456,7 @@ function MatchScreen({
             <section className="table-conditions" aria-labelledby="table-condition-title">
               <div className="table-section-title">
                 <span aria-hidden="true">?</span>
-                <div><small>Medical mischief makers</small><h2 id="table-condition-title">The four usual suspects</h2></div>
+                <div><small>Conditions</small><h2 id="table-condition-title">Possible conditions</h2></div>
               </div>
               <ConditionGrid conditions={model.conditions} compact />
             </section>
@@ -466,33 +466,33 @@ function MatchScreen({
                 {Array.from({ length: match.maximumRounds }, (_, index) => <span key={index} className={index < match.round ? "is-current" : ""}>{index + 1}</span>)}
               </div>
               <PatientPortrait name={model.patient.displayName} large />
-              <p className="playful-kicker">Human at the center of the chaos</p>
+              <p className="playful-kicker">Patient</p>
               <h1 id="patient-table-name">{model.patient.displayName} <small>Age {model.patient.age}</small></h1>
               <p className="patient-table-story">{model.patient.shortStory}</p>
               <div className="patient-latest-clue">
-                <small>Latest public oddity</small>
+                <small>Latest shared clue</small>
                 <strong>{match.publicClues.at(-1)?.title ?? model.patient.startingSymptom}</strong>
               </div>
               <aside className="event-card" aria-label="Shared event">
                 <span aria-hidden="true">&#x2605;</span>
-                <div><small>Plot twist</small><strong>{match.sharedEvent?.title ?? "Something weird is loading"}</strong><p>{match.sharedEvent?.description ?? "One friendly wobble will shake up this match."}</p></div>
+                <div><small>Shared event</small><strong>{match.sharedEvent?.title ?? "Event pending"}</strong><p>{match.sharedEvent?.description ?? "One shared event will appear during this match."}</p></div>
               </aside>
             </article>
 
             <section id="clue-board" className="table-shared-clues" aria-labelledby="clue-title">
               <div className="table-section-title">
                 <span aria-hidden="true">&#x2726;</span>
-                <div><small>Everybody saw these</small><h2 id="clue-title">The public clue pile</h2></div>
+                <div><small>Visible to everyone</small><h2 id="clue-title">Shared clues</h2></div>
                 <b className="count-pill">{match.publicClues.length}</b>
               </div>
-              <ClueList clues={match.publicClues} empty="Public oddities will pile up here." />
+              <ClueList clues={match.publicClues} empty="Shared clues will appear here." />
             </section>
 
             <section className="reveal-table table-reveal-zone" aria-labelledby="reveal-title" aria-live="polite">
             <div className="section-heading compact-heading">
               <div>
-                <p className="playful-kicker">Center-stage nonsense</p>
-                <h2 id="reveal-title">The dramatic card flip</h2>
+                <p className="playful-kicker">Center of the table</p>
+                <h2 id="reveal-title">Card reveal</h2>
               </div>
             </div>
             {match.latestReveals.length > 0 ? (
@@ -516,7 +516,7 @@ function MatchScreen({
             ) : (
               <div className="empty-reveal">
                 <span aria-hidden="true">&#x21bb;</span>
-                <p>Locked cards make their grand entrance here.</p>
+                <p>Locked cards will be revealed here.</p>
               </div>
             )}
           </section>
@@ -525,13 +525,13 @@ function MatchScreen({
 
         <section id="player-hand" className="hand-dock" aria-labelledby="hand-title">
           <div className="private-clue-zone player-private-clues" aria-labelledby="private-clue-title">
-            <div><h3 id="private-clue-title">Your secret evidence stash</h3><span>For your eyeballs only</span></div>
-            <ClueList clues={match.privateClues} empty="Your secret stash is suspiciously empty." />
+            <div><h3 id="private-clue-title">Your private clues</h3><span>Hidden from your opponent</span></div>
+            <ClueList clues={match.privateClues} empty="No private clues yet." />
           </div>
           <div className="hand-heading">
             <div>
               <p className="playful-kicker">Round {match.round}</p>
-              <h2 id="hand-title">Choose your trouble</h2>
+              <h2 id="hand-title">Your hand</h2>
               <p>{match.statusMessage}</p>
             </div>
             <div className="hand-tools">
@@ -540,22 +540,22 @@ function MatchScreen({
                 disabled={!match.redrawAvailable || match.phase !== "card_selection"}
                 onClick={actions.useRedraw}
               >
-                Fresh hand, please
+                Redraw hand
                 <small>{match.redrawAvailable ? "1 free" : "Used"}</small>
               </button>
             </div>
           </div>
           {match.diagnosisBlockedUntilNextRound && (
             <p className="round-lock-note" role="status">
-              That diagnosis tripped over its own shoelaces. Try again next round.
+              That diagnosis was incorrect. You can try again next round.
             </p>
           )}
           {match.humanHasDiagnosed ? (
             <div className="spectator-card">
               <span aria-hidden="true">&#x2713;</span>
               <div>
-                <strong>Your diagnosis has left the building.</strong>
-                <p>Stay for the remaining oddities and the dramatic unmasking.</p>
+                <strong>Your diagnosis is submitted.</strong>
+                <p>Stay at the table to see the remaining clues and final result.</p>
               </div>
             </div>
           ) : (
@@ -588,8 +588,8 @@ function MatchScreen({
           {(match.canAdvance || match.mustDiagnose) && (
             <section className="round-decision" aria-labelledby="round-decision-title">
               <div>
-                <p className="playful-kicker">Decision o'clock</p>
-                <h3 id="round-decision-title">The clues have stopped yelling</h3>
+                <p className="playful-kicker">Your decision</p>
+                <h3 id="round-decision-title">Review the clues</h3>
                 <p>{roundDecisionMessage}</p>
               </div>
               <div className="round-decision-actions">
@@ -720,17 +720,17 @@ function DiagnosisPanel({
         <button className="modal-close" type="button" onClick={onClose} aria-label="Close diagnosis panel">
           &times;
         </button>
-        <p className="playful-kicker">Put on your serious face</p>
+        <p className="playful-kicker">Make your diagnosis</p>
         <h2 id="diagnosis-title" ref={titleRef} tabIndex={-1}>
-          What is causing all this fuss?
+          Which condition explains the clues?
         </h2>
         <p>
           Pick one condition and two clues that influenced you. You have{" "}
           <strong>{model.match.diagnosisAttemptsRemaining} attempt(s)</strong> remaining.
         </p>
         <p className="consequence-note">
-          A wrong diagnosis costs 150 points. Your clues stay put, your dignity
-          mostly survives, and you can keep investigating.
+          A wrong diagnosis costs 150 points. Your clues remain available, and
+          you can continue investigating.
         </p>
         <form onSubmit={submit} noValidate>
           <fieldset className="diagnosis-choices">
@@ -792,7 +792,7 @@ function ResultsScreen({ model, actions }: ScreenProps) {
   if (!results) {
     return (
       <main id="meducktion-main" className="page-shell results-screen">
-        <h1>The score goblins are counting&hellip;</h1>
+        <h1>Calculating results&hellip;</h1>
       </main>
     );
   }
@@ -816,10 +816,10 @@ function ResultsScreen({ model, actions }: ScreenProps) {
         <i />
       </div>
       <section className="winner-hero" aria-labelledby="winner-title">
-        <p className="playful-kicker">Case closed-ish</p>
-        <h1 id="winner-title">{results.winnerName} rules the waiting room!</h1>
+        <p className="playful-kicker">Match complete</p>
+        <h1 id="winner-title">{results.winnerName} wins!</h1>
         <p>
-          The culprit in sensible shoes was <strong>{results.hiddenDiagnosisName}</strong>.
+          The correct condition was <strong>{results.hiddenDiagnosisName}</strong>.
         </p>
         {human && (
           <div className="human-result-summary">
@@ -832,7 +832,7 @@ function ResultsScreen({ model, actions }: ScreenProps) {
               </span>
             </p>
             <div className="human-score">
-              <span>Your detective points</span>
+              <span>Your score</span>
               <strong>{human.totalScore}</strong>
               <small>/ 1,000 points</small>
             </div>
@@ -842,12 +842,12 @@ function ResultsScreen({ model, actions }: ScreenProps) {
       <section className="ranking-panel" aria-labelledby="ranking-title">
         <div className="section-heading compact-heading">
           <div>
-            <p className="playful-kicker">The dust has settled</p>
-            <h2 id="ranking-title">Waiting-room leaderboard</h2>
+            <p className="playful-kicker">Final standings</p>
+            <h2 id="ranking-title">Player rankings</h2>
           </div>
         </div>
         <p className="tie-break-note">
-          The tie-break gremlin used: <strong>{results.tieBreakLabel}</strong>.
+          Winner decided by: <strong>{results.tieBreakLabel}</strong>.
         </p>
         <div className="rank-list">
           {results.rankings.map((player) => (
@@ -869,14 +869,14 @@ function ResultsScreen({ model, actions }: ScreenProps) {
       </section>
       <section className="recap-grid">
         <article className="learn-card">
-          <p className="playful-kicker">Why the clues were not just being dramatic</p>
-          <h2>The mystery, untangled</h2>
+          <p className="playful-kicker">Case explanation</p>
+          <h2>Why the evidence fits</h2>
           <p>{results.explanation}</p>
           <p className="education-note">This explanation applies only to this authored fictional case.</p>
         </article>
         <article className="paths-card">
-          <p className="playful-kicker">Every questionable decision</p>
-          <h2>How everyone snooped</h2>
+          <p className="playful-kicker">Match recap</p>
+          <h2>Investigation paths</h2>
           {results.rankings.map((player) => (
             <div className="player-path" key={player.playerId}>
               <strong>{player.displayName}</strong>
@@ -901,7 +901,7 @@ function ScoreDetails({ player }: { player: NonNullable<CardAppModel["results"]>
   const score = player.breakdown;
   return (
     <details className="score-details" open={player.isHuman}>
-      <summary>Show the suspicious math</summary>
+      <summary>Score details</summary>
       <dl>
         <div><dt>Correct diagnosis</dt><dd>{score.correctDiagnosis}</dd></div>
         <div><dt>Supporting clues</dt><dd>{score.supportingClues}</dd></div>

@@ -85,7 +85,7 @@ describe("multiplayer lobby UI", () => {
 
     expect(screen.getByLabelText("Room players").children).toHaveLength(3);
     expect(screen.getByText("Keshawn (You)")).toBeInTheDocument();
-    expect(screen.getByText("Unclaimed chair")).toBeInTheDocument();
+    expect(screen.getByText("Open seat")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Start Match" }));
     expect(calls.startLobby).toHaveBeenCalledOnce();
   });
@@ -98,8 +98,8 @@ describe("multiplayer lobby UI", () => {
         onExit={vi.fn()}
       />,
     );
-    expect(screen.getByRole("heading", { name: "Every chair is warm and every opinion is ready" })).toBeInTheDocument();
-    expect(screen.getByText(/next bit of medical mischief/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "The room is ready" })).toBeInTheDocument();
+    expect(screen.getByText(/Live match synchronization/)).toBeInTheDocument();
   });
 
   it("stays in the lobby when leaving fails", async () => {

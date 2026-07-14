@@ -22,7 +22,7 @@ describe("player-facing card table", () => {
     const user = userEvent.setup();
     render(<CardGameRoot />);
     await user.click(screen.getByRole("button", { name: "Play Online" }));
-    expect(screen.getByRole("heading", { name: "Pull up a chair. The symptoms are getting weird." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Create or join a private room" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Back" }));
     expect(screen.getByRole("heading", { level: 1, name: "Meducktion" })).toBeInTheDocument();
   });
