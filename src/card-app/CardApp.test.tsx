@@ -164,7 +164,8 @@ describe("competitive card-game UI", () => {
   it("presents the new home experience and prominent disclaimer", () => {
     render(<CardApp model={model("home")} actions={actions()} />);
     expect(screen.getByText(MEDUCKTION_TAGLINE)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Can you crack the case first?" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Meducktion" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Outwit the clues. Outsmart the quacks." })).toBeInTheDocument();
     expect(screen.getByText(MEDUCKTION_DISCLAIMER)).toBeInTheDocument();
     expect(screen.queryByText(/care budget|stability|focus points/i)).not.toBeInTheDocument();
   });
@@ -183,7 +184,7 @@ describe("competitive card-game UI", () => {
     const user = userEvent.setup();
     render(<CardApp model={model("home")} actions={actions()} />);
     await user.click(screen.getByRole("button", { name: "How to Play" }));
-    expect(screen.getByRole("dialog", { name: "Solve the same fictional case" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Everybody gets the same weird case" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Next" }));
     expect(screen.getByRole("heading", { name: "Play one card each round" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Skip tutorial" }));
@@ -231,8 +232,8 @@ describe("competitive card-game UI", () => {
 
   it("keeps public, private, and opponent-hidden clues distinct", () => {
     render(<CardApp model={model("match")} actions={actions()} />);
-    expect(screen.getByRole("heading", { name: "Shared clues" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Your private clues" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "The public clue pile" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Your secret evidence stash" })).toBeInTheDocument();
     expect(screen.getAllByText("Shared with room").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Private to you").length).toBeGreaterThan(0);
     expect(screen.getByText("Jordan has little appetite.")).toBeInTheDocument();
@@ -259,7 +260,7 @@ describe("competitive card-game UI", () => {
     const user = userEvent.setup();
     const redrawCalls = actions();
     const { rerender } = render(<CardApp model={model("match")} actions={redrawCalls} />);
-    await user.click(screen.getByRole("button", { name: /Redraw hand/i }));
+    await user.click(screen.getByRole("button", { name: /Fresh hand, please/i }));
     expect(redrawCalls.useRedraw).toHaveBeenCalledOnce();
 
     const revealCalls = actions();
@@ -303,7 +304,7 @@ describe("competitive card-game UI", () => {
     render(<CardApp model={model("match")} actions={actions()} />);
     expect(screen.getByRole("navigation", { name: "Match sections" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Patient" })).toHaveAttribute("href", "#patient-card");
-    expect(screen.getByRole("link", { name: "Your hand" })).toHaveAttribute("href", "#player-hand");
+    expect(screen.getByRole("link", { name: "Your cards" })).toHaveAttribute("href", "#player-hand");
   });
 
   it("renders winner, score categories, investigation paths, and educational recap", async () => {
@@ -358,16 +359,16 @@ describe("competitive card-game UI", () => {
     };
     const calls = actions();
     render(<CardApp model={resultModel} actions={calls} />);
-    expect(screen.getByRole("heading", { name: "Alex wins the room!" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Alex rules the waiting room!" })).toBeInTheDocument();
     expect(screen.getByText("You won the room.")).toBeInTheDocument();
     expect(screen.getByText("Your Appendicitis diagnosis was correct.")).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/\\u[0-9a-f]{4}/i);
     expect(screen.getAllByText("950")).toHaveLength(3);
     expect(screen.getByText(/seeded mystery draw/i)).toBeInTheDocument();
-    expect(screen.getByText(/Winner decided by/i)).toBeInTheDocument();
-    expect(screen.getAllByText("Score details")[0]?.closest("details")).toHaveAttribute("open");
+    expect(screen.getByText(/tie-break gremlin used/i)).toBeInTheDocument();
+    expect(screen.getAllByText("Show the suspicious math")[0]?.closest("details")).toHaveAttribute("open");
     expect(screen.getAllByText("Correct diagnosis")).toHaveLength(2);
-    expect(screen.getByRole("heading", { name: "Investigation paths" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "How everyone snooped" })).toBeInTheDocument();
     expect(screen.getByText(/moving pain, loss of appetite/i)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Play Again" }));
     expect(calls.playAgain).toHaveBeenCalledOnce();

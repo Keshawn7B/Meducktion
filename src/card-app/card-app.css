@@ -22,9 +22,10 @@
   overflow-x: hidden;
   color: var(--md-text);
   background:
-    radial-gradient(circle at 10% 5%, rgb(57 198 189 / 12%), transparent 28rem),
-    radial-gradient(circle at 91% 22%, rgb(156 130 230 / 13%), transparent 30rem),
+    linear-gradient(rgb(7 21 42 / 30%), rgb(7 21 42 / 30%)),
+    url("/assets/comic-medical-madness-pattern.webp") 0 0 / 42rem auto repeat,
     var(--md-bg);
+  background-attachment: fixed;
   font-family: "Nunito", ui-rounded, "Segoe UI", sans-serif;
   font-size: 16px;
   line-height: 1.5;
@@ -225,6 +226,15 @@
   letter-spacing: -0.05em;
 }
 
+.meducktion-brand h1 {
+  margin: 0;
+  color: var(--md-text-light);
+  font-family: "Quicksand", "Nunito", sans-serif;
+  font-weight: 900;
+  letter-spacing: -0.075em;
+  line-height: 0.88;
+}
+
 .meducktion-brand small {
   color: #afc9da;
   font-size: 0.8rem;
@@ -331,16 +341,39 @@
 }
 
 .home-copy .playful-kicker {
-  margin-top: 3.5rem;
+  margin-top: 2rem;
   color: var(--md-yellow);
 }
 
-.home-copy h1 {
+.home-copy .brand-hero {
+  display: flex;
+  align-items: flex-end;
+}
+
+.home-copy .brand-hero h1 {
+  font-size: clamp(4.5rem, 10vw, 9rem);
+  text-shadow: 0.08em 0.08em 0 #6e5bd4, 0.13em 0.13em 0 rgb(17 36 61 / 55%);
+}
+
+.home-copy .brand-hero .brand-mark {
+  width: clamp(4rem, 7vw, 6.5rem);
+  height: clamp(4rem, 7vw, 6.5rem);
+  flex: 0 0 auto;
+  border-width: 4px;
+  box-shadow: 0.45rem 0.45rem 0 var(--md-coral);
+}
+
+.home-copy .brand-hero .brand-mark span {
+  font-size: clamp(2.4rem, 4vw, 4rem);
+}
+
+.home-hook {
   max-width: 12ch;
   margin-bottom: 1.25rem;
   color: var(--md-text-light);
-  font-size: clamp(2.75rem, 7vw, 5.75rem);
-  letter-spacing: -0.06em;
+  font-size: clamp(1.8rem, 4vw, 3.35rem);
+  letter-spacing: -0.045em;
+  line-height: 1.02;
 }
 
 .home-lede {
@@ -381,7 +414,8 @@
   border: 1px solid rgb(255 255 255 / 13%);
   border-radius: 50% 50% 3rem 3rem;
   background:
-    linear-gradient(0deg, #d9a66c 0 18%, transparent 18%),
+    linear-gradient(180deg, rgb(18 41 61 / 5%), rgb(18 41 61 / 22%)),
+    url("/assets/cozy-clinic-table-background.webp") center / cover no-repeat,
     linear-gradient(135deg, #d9f3ef, #c4d9f0);
   box-shadow: 0 2rem 5rem rgb(0 0 0 / 28%);
   isolation: isolate;
@@ -530,6 +564,16 @@
   width: 100%;
   height: 100%;
   overflow: hidden;
+}
+
+.patient-portrait-image {
+  position: absolute;
+  z-index: 8;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 38%;
 }
 
 .portrait-face {
@@ -2011,9 +2055,11 @@
     padding: 2rem 1.25rem;
   }
   .home-copy { text-align: center; }
-  .home-copy h1,
+  .home-copy .brand-hero,
+  .home-hook,
   .home-lede,
   .home-copy .meducktion-disclaimer { margin-inline: auto; }
+  .home-copy .brand-hero { justify-content: center; }
   .home-actions { justify-content: center; }
   .home-art { width: min(30rem, 100%); min-height: 27rem; margin: 0 auto; }
   .home-art .portrait-large { width: 15rem; height: 19rem; }
@@ -2077,7 +2123,10 @@
   .meducktion-app { font-size: 15px; }
   .home-screen { gap: 2.5rem; }
   .home-copy .playful-kicker { margin-top: 2.25rem; }
-  .home-copy h1 { font-size: clamp(2.8rem, 16vw, 4.2rem); }
+  .home-copy .brand-hero { gap: 0.5rem; }
+  .home-copy .brand-hero h1 { font-size: clamp(3.25rem, 17vw, 5rem); }
+  .home-copy .brand-hero .brand-mark { width: 3.4rem; height: 3.4rem; border-width: 3px; }
+  .home-copy .brand-hero .brand-mark span { font-size: 2.1rem; }
   .home-actions { display: grid; }
   .home-actions .button { width: 100%; }
   .global-game-error { right: 0.5rem; bottom: 0.5rem; max-width: calc(100% - 1rem); }
@@ -2191,7 +2240,8 @@
   border: 0.45rem solid #c9945c;
   border-radius: 4rem 4rem 2.3rem 2.3rem;
   background:
-    radial-gradient(circle at 50% 46%, rgb(255 255 255 / 8%) 0 1px, transparent 2px) 0 0 / 22px 22px,
+    linear-gradient(180deg, rgb(4 31 41 / 62%), rgb(5 38 48 / 48%)),
+    url("/assets/cozy-clinic-table-background.webp") center 52% / cover no-repeat,
     radial-gradient(ellipse at center, #245e68 0%, #164651 58%, #0c303c 100%);
   box-shadow: inset 0 0 0 0.22rem #8f603a, inset 0 0 5rem rgb(0 0 0 / 25%), 0 1.1rem 2.5rem rgb(6 20 31 / 35%);
 }
@@ -2230,6 +2280,7 @@
 .opponent-identity strong { font-size: 1.05rem; }
 .opponent-identity small { color: #bbd6d5; }
 .bot-avatar-large { width: 3.25rem; height: 3.25rem; font-size: 1.15rem; }
+.bot-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
 .opponent-player .status-pill { grid-column: auto; color: #183b42; }
 
 .opponent-card-backs {

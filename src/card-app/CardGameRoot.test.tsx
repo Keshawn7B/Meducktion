@@ -22,14 +22,16 @@ describe("player-facing card table", () => {
     const user = userEvent.setup();
     render(<CardGameRoot />);
     await user.click(screen.getByRole("button", { name: "Play Online" }));
-    expect(screen.getByRole("heading", { name: "Meet around the same mystery" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Pull up a chair. The symptoms are getting weird." })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Back" }));
-    expect(screen.getByRole("heading", { name: "Can you crack the case first?" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Meducktion" })).toBeInTheDocument();
   });
 
   it("mounts the active card controller into the tabletop screen", async () => {
     await openMatch();
     expect(screen.getByLabelText("Meducktion card table")).toBeInTheDocument();
+    expect(document.querySelector('img[src="/assets/patient-jordan-lee.webp"]')).toBeInTheDocument();
+    expect(document.querySelector('img[src="/assets/opponent-dr-beak.webp"]')).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /card:/i })).toHaveLength(3);
     expect(screen.getByLabelText("Three face-down opponent cards").children).toHaveLength(3);
     expect(localStorage.getItem(CARD_MATCH_STORAGE_KEY)).toContain('"phase":"card_selection"');
