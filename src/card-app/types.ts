@@ -161,4 +161,5 @@ export interface CardAppActions {
 export interface CardAppProps {
   readonly model: CardAppModel;
   readonly actions: CardAppActions;
+  readonly onOpenMultiplayer?: () => void;
 }

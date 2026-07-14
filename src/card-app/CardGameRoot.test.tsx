@@ -11,13 +11,22 @@ afterEach(() => { cleanup(); localStorage.clear(); });
 async function openMatch() {
   const user = userEvent.setup();
   render(<CardGameRoot />);
-  await user.click(screen.getByRole("button", { name: "Play" }));
+  await user.click(screen.getByRole("button", { name: "Play Local" }));
   await user.click(screen.getByRole("button", { name: "Start Match" }));
   await user.click(screen.getByRole("button", { name: "Deal Cards" }));
   return user;
 }
 
 describe("player-facing card table", () => {
+  it("opens and exits the online lobby without initializing a match", async () => {
+    const user = userEvent.setup();
+    render(<CardGameRoot />);
+    await user.click(screen.getByRole("button", { name: "Play Online" }));
+    expect(screen.getByRole("heading", { name: "Meet around the same mystery" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByRole("heading", { name: "Can you crack the case first?" })).toBeInTheDocument();
+  });
+
   it("mounts the active card controller into the tabletop screen", async () => {
     await openMatch();
     expect(screen.getByLabelText("Meducktion card table")).toBeInTheDocument();

@@ -64,7 +64,7 @@ const tutorialPanels = [
   },
 ] as const;
 
-export function CardApp({ model, actions }: CardAppProps) {
+export function CardApp({ model, actions, onOpenMultiplayer }: CardAppProps) {
   const [tutorialOpen, setTutorialOpen] = useState(false);
 
   return (
@@ -77,6 +77,7 @@ export function CardApp({ model, actions }: CardAppProps) {
           model={model}
           actions={actions}
           onTutorial={() => setTutorialOpen(true)}
+          {...(onOpenMultiplayer ? { onOpenMultiplayer } : {})}
         />
       )}
       {model.screen === "setup" && (
@@ -137,7 +138,8 @@ function HomeScreen({
   model,
   actions,
   onTutorial,
-}: ScreenProps & { onTutorial: () => void }) {
+  onOpenMultiplayer,
+}: ScreenProps & { onTutorial: () => void; onOpenMultiplayer?: () => void }) {
   return (
     <main id="meducktion-main" className="home-screen">
       <section className="home-copy" aria-labelledby="home-title">
@@ -153,8 +155,16 @@ function HomeScreen({
             className="button button-primary button-large"
             onClick={() => actions.openSetup("competitive")}
           >
-            Play
+            Play Local
           </button>
+          {onOpenMultiplayer && (
+            <button
+              className="button button-cream button-large"
+              onClick={onOpenMultiplayer}
+            >
+              Play Online
+            </button>
+          )}
           <button className="button button-cream" onClick={onTutorial}>
             How to Play
           </button>

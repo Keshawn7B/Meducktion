@@ -169,11 +169,11 @@ describe("competitive card-game UI", () => {
     expect(screen.queryByText(/care budget|stability|focus points/i)).not.toBeInTheDocument();
   });
 
-  it("routes Play to competitive setup and Practice separately", async () => {
+  it("routes Play Local to competitive setup and Practice separately", async () => {
     const user = userEvent.setup();
     const calls = actions();
     render(<CardApp model={model("home")} actions={calls} />);
-    await user.click(screen.getByRole("button", { name: "Play" }));
+    await user.click(screen.getByRole("button", { name: "Play Local" }));
     await user.click(screen.getByRole("button", { name: "Practice" }));
     expect(calls.openSetup).toHaveBeenNthCalledWith(1, "competitive");
     expect(calls.openSetup).toHaveBeenNthCalledWith(2, "practice");

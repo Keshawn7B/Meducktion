@@ -180,13 +180,13 @@ Resume must recreate the match exactly and reject corrupt or incompatible snapsh
 
 ## Future multiplayer boundary
 
-### Multiplayer foundation implemented
+### Multiplayer lobby implemented
 
-The first transport slice is now present under `src/firebase` and `src/multiplayer-room`. It adds lazy Firebase Web SDK configuration, anonymous sign-in, explicit Auth/Firestore emulator connections, six-character room codes, versioned lobby records, 2–4 member capacity, readiness, host-only start, expiry, real-time subscriptions, and transactional command submission. Room transitions reuse `CardMatchCommandEnvelope` and `applyCardMatchCommand`; Firebase does not select cards, reveal clues, validate diagnoses, run bots, or score matches.
+The transport and lobby slice is present under `src/firebase`, `src/multiplayer-room`, and `src/multiplayer-lobby`. The home screen offers separate local and online entry points. Online players can create a private room, select two to four seats, share or enter a six-character room code, join anonymously, see live membership, toggle their own ready state, leave without keeping a ghost seat, and let the host lock a fully ready lobby. Firebase initialization remains lazy, so local play and ordinary UI tests do not contact Firebase.
 
-Firestore rules permit authenticated users to read a lobby in order to join, prohibit room listing, restrict initial creation to the authenticated host, cap membership, preserve pinned room fields, and deny nonmember reads after play begins. Emulator-backed rules tests are included separately from the normal Vitest suite. They require JDK 21 or newer because of the current Firebase CLI requirement.
+Firestore rules permit authenticated users to read a lobby in order to join, prohibit room listing, restrict initial creation to the authenticated host, cap membership, preserve pinned room fields, allow a guest to change only their own ready state or leave, and allow only the host to lock or delete the room. The deployed rules intentionally reject live match-state writes. Emulator-backed rules tests cover permitted joins/readiness/host locking and rejected cross-player edits. They require JDK 21 or newer because of the current Firebase CLI requirement.
 
-This slice is infrastructure, not a complete online UX. Create/join lobby screens, reconnect presentation, host migration, per-player private-state partitioning, and two-browser end-to-end testing remain next. The current full session snapshot is member-readable and therefore suitable only for casual private-room prototyping, not ranked cheat resistance.
+The ready transition stores no card-match session. After the host starts, the UI clearly stops at a secure handoff screen rather than publishing hidden cards or private clues in the shared room document. Per-player private-state partitioning, authoritative live commands, reconnect presentation, host migration, and two-browser full-match testing remain next. A disposable production smoke test verified create, join, ready, lock, and cleanup against the deployed `meducktion` project.
 
 Firebase networking remains outside the engine. The engine knows nothing about Firebase, browser clocks, presence, authentication, transport retries, or server timestamps. The room adapter transmits validated commands and versioned snapshots and enforces expected revisions and command idempotency. It must not resolve cards, inspect private clues for unrelated players, choose bot actions, recalculate scores, or alter authored medical truth.
 
@@ -225,7 +225,7 @@ Remaining v2 work is deliberately staged rather than folded into this narrow eng
 
 ## Current limitations
 
-- Multiplayer is locally simulated with a bot; there is no online room or human-to-human networking.
+- Online create/join/readiness lobbies work through Firebase, but synchronized human-to-human card play is not connected yet.
 - Bot behavior is intentionally simple and is not a competitive production AI.
 - The first case provides limited replay variety; additional variants require medically responsible authoring and review.
 - The competitive 2–4 player architecture still needs real multi-device synchronization and playtesting.

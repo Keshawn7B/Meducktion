@@ -34,6 +34,29 @@ export function setMemberReady(room: MultiplayerRoom, uid: string, ready: boolea
   return { ...room, members: { ...room.members, [uid]: { ...member, ready } }, revision: room.revision + 1 };
 }
 
+export function leaveRoomRecord(room: MultiplayerRoom, uid: string): MultiplayerRoom {
+  if (!room.memberUids.includes(uid)) throw new MultiplayerRoomError("NOT_MEMBER", "You are not a member of this room.");
+  if (room.hostUid === uid) throw new MultiplayerRoomError("NOT_HOST", "The host closes the room instead of leaving it.");
+  if (room.status !== "lobby") throw new MultiplayerRoomError("ROOM_ACTIVE", "This lobby already started.");
+  const members = { ...room.members };
+  delete members[uid];
+  return {
+    ...room,
+    memberUids: room.memberUids.filter((memberUid) => memberUid !== uid),
+    members,
+    revision: room.revision + 1,
+  };
+}
+
+export function markRoomReadyToStart(room: MultiplayerRoom, uid: string): MultiplayerRoom {
+  if (room.hostUid !== uid) throw new MultiplayerRoomError("NOT_HOST", "Only the host can start the match.");
+  if (room.status !== "lobby") throw new MultiplayerRoomError("ROOM_ACTIVE", "This lobby already started.");
+  if (room.memberUids.length < 2 || !room.memberUids.every((id) => room.members[id]?.ready)) {
+    throw new MultiplayerRoomError("NOT_READY", "Every player must be ready.");
+  }
+  return { ...room, status: "ready", revision: room.revision + 1 };
+}
+
 export function startRoomRecord(room: MultiplayerRoom, uid: string, session: CardMatchSession, now: number): MultiplayerRoom {
   if (room.hostUid !== uid) throw new MultiplayerRoomError("NOT_HOST", "Only the host can start the match.");
   if (room.status !== "lobby") throw new MultiplayerRoomError("ROOM_ACTIVE", "This match already started.");

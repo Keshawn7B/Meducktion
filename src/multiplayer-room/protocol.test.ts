@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { thePainThatMovedCardCase } from "../card-content";
 import { createCardMatch } from "../card-game-engine";
 import { createCardMatchSession } from "../card-match-session";
-import { applyRoomCommand, createRoomRecord, generateRoomCode, joinRoomRecord, setMemberReady, startRoomRecord } from ".";
+import { applyRoomCommand, createRoomRecord, generateRoomCode, joinRoomRecord, leaveRoomRecord, markRoomReadyToStart, setMemberReady, startRoomRecord } from ".";
 
 const created = () => createRoomRecord({ roomId: "abc123", hostUid: "host", hostDisplayName: "Host", maximumPlayers: 4, caseId: thePainThatMovedCardCase.caseId, contentVersion: thePainThatMovedCardCase.contentVersion, seed: "room-seed", now: 1_000 });
 
@@ -28,6 +28,23 @@ describe("multiplayer room protocol", () => {
     room = startRoomRecord(room, "host", session, 3_000);
     expect(room.status).toBe("active");
     expect(room.session?.matchState.playerOrder).toEqual(["host", "guest"]);
+  });
+
+  it("locks a fully-ready lobby without publishing private match state", () => {
+    let room = joinRoomRecord(created(), "guest", "Guest", 2_000);
+    expect(() => markRoomReadyToStart(room, "host")).toThrow(/Every player/);
+    room = setMemberReady(room, "guest", true);
+    expect(() => markRoomReadyToStart(room, "guest")).toThrow(/Only the host/);
+    room = markRoomReadyToStart(room, "host");
+    expect(room.status).toBe("ready");
+    expect(room.session).toBeNull();
+  });
+
+  it("removes a guest cleanly when they leave the lobby", () => {
+    const room = leaveRoomRecord(joinRoomRecord(created(), "guest", "Guest", 2_000), "guest");
+    expect(room.memberUids).toEqual(["host"]);
+    expect(room.members.guest).toBeUndefined();
+    expect(room.revision).toBe(2);
   });
 
   it("applies existing idempotent command envelopes without duplicating rules", () => {

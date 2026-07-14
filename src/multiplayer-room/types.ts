@@ -1,6 +1,6 @@
 import type { CardMatchCommandEnvelope, CardMatchSession } from "../card-match-session";
 
-export type MultiplayerRoomStatus = "lobby" | "active" | "complete";
+export type MultiplayerRoomStatus = "lobby" | "ready" | "active" | "complete";
 
 export interface MultiplayerMember {
   uid: string;
@@ -41,6 +41,8 @@ export interface MultiplayerRoomRepository {
   createRoom(input: CreateMultiplayerRoomInput): Promise<MultiplayerRoom>;
   joinRoom(roomId: string, uid: string, displayName: string): Promise<MultiplayerRoom>;
   setReady(roomId: string, uid: string, ready: boolean): Promise<MultiplayerRoom>;
+  markReadyToStart(roomId: string, uid: string): Promise<MultiplayerRoom>;
+  leaveRoom(roomId: string, uid: string): Promise<void>;
   startRoom(roomId: string, uid: string, session: CardMatchSession): Promise<MultiplayerRoom>;
   submitCommand(roomId: string, uid: string, envelope: CardMatchCommandEnvelope): Promise<MultiplayerRoom>;
   subscribe(roomId: string, listener: (room: MultiplayerRoom | null) => void): () => void;

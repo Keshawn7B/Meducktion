@@ -1,5 +1,5 @@
 import { doc, onSnapshot, runTransaction, setDoc, type Firestore } from "firebase/firestore";
-import { applyRoomCommand, createRoomRecord, joinRoomRecord, setMemberReady, startRoomRecord } from "./protocol";
+import { applyRoomCommand, createRoomRecord, joinRoomRecord, leaveRoomRecord, markRoomReadyToStart, setMemberReady, startRoomRecord } from "./protocol";
 import type { CreateMultiplayerRoomInput, MultiplayerRoom, MultiplayerRoomRepository } from "./types";
 import type { CardMatchCommandEnvelope, CardMatchSession } from "../card-match-session";
 
@@ -24,6 +24,17 @@ export class FirestoreMultiplayerRoomRepository implements MultiplayerRoomReposi
   }
   joinRoom(roomId: string, uid: string, displayName: string) { return this.update(roomId, (room) => joinRoomRecord(room, uid, displayName, this.now())); }
   setReady(roomId: string, uid: string, ready: boolean) { return this.update(roomId, (room) => setMemberReady(room, uid, ready)); }
+  markReadyToStart(roomId: string, uid: string) { return this.update(roomId, (room) => markRoomReadyToStart(room, uid)); }
+  async leaveRoom(roomId: string, uid: string): Promise<void> {
+    await runTransaction(this.firestore, async (transaction) => {
+      const reference = this.reference(roomId);
+      const snapshot = await transaction.get(reference);
+      if (!snapshot.exists()) return;
+      const room = snapshot.data() as MultiplayerRoom;
+      if (room.hostUid === uid) transaction.delete(reference);
+      else transaction.set(reference, leaveRoomRecord(room, uid));
+    });
+  }
   startRoom(roomId: string, uid: string, session: CardMatchSession) { return this.update(roomId, (room) => startRoomRecord(room, uid, session, this.now())); }
   submitCommand(roomId: string, uid: string, envelope: CardMatchCommandEnvelope) { return this.update(roomId, (room) => applyRoomCommand(room, uid, envelope, this.now())); }
   subscribe(roomId: string, listener: (room: MultiplayerRoom | null) => void) {
