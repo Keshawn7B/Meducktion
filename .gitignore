@@ -1,0 +1,9 @@
+node_modules/
+coverage/
+dist/
+firestore-debug.log
+ui-debug.log
+*.tsbuildinfo
+.env
+.env.*
+!.env.example

@@ -1,233 +1,192 @@
-# CASE//SIGNAL Product Requirements Document
+# Meducktion Product Requirements Document
 
-**Working title:** CASE//SIGNAL  
-**Tagline:** *Read the evidence. Protect the patient. Call the case.*  
-**Status:** Planning draft  
+**Official working title:** Meducktion
+
+**Tagline:** *Reveal the clues. Solve the case. Outsmart the room.*
+
+**Status:** Current competitive-card direction
+
 **Title clearance:** Before public launch, check trademark, domain, social-handle, app-store, and other platform availability.
 
-> **Medical disclaimer:** CASE//SIGNAL is a fictional educational game. It is not medical advice, clinical training, or a diagnostic tool. It must not be used to make decisions about real patients.
+> **Medical disclaimer:** Meducktion is a fictional educational game. It is not medical advice, clinical training, or a diagnostic tool. Do not use it to make decisions about real patients.
 
-## 1. Product overview
+## 1. Supersession notice
 
-CASE//SIGNAL is a cooperative-first, web-based medical deduction and strategy game. Players investigate authored fictional patient cases, spend limited actions to gather evidence, maintain a ranked differential diagnosis, protect patient stability, and submit a structured final Case Call.
+Meducktion is now a beginner-friendly competitive medical mystery card game. The former cooperative clinical-simulator design—Care Intervals, Focus, Care Budget, numerical stability, delayed test queues, treatments, urgency and next-step choices, ranked differentials, and long Case Calls—is superseded for active gameplay.
 
-The intended audience includes curious general players as well as early health-science learners. The appeal comes from choosing what information matters under resource and time pressure, discussing uncertain evidence, and balancing diagnostic confidence with safety. Success depends on a chain of decisions rather than recall of isolated facts.
+Useful decisions from that work remain: authored and versioned medical content, stable IDs, deterministic rules, structured commands/events/errors, local snapshot validation, accessibility, plain language, prominent disclaimers, and professional review before release. The complete change and legacy boundary are documented in [the competitive card-game refactor](MEDUCKTION_CARD_GAME_REFACTOR.md).
 
-It is not a quiz: evidence arrives through player choices, clues may support, conflict with, or leave diagnoses unresolved, and several safe outcomes may exist. It is not a deduction-game reskin: its identity is built around weighted evidence, limited Focus, delayed tests, a Care Budget, patient progression, treatment effects, differential ranking, and safety-aware scoring. It must not copy Deduckto's rules, terminology, branding, identity structure, hidden attribute combinations, YES/NO piles, guess penalties, or visual identity.
+## 2. Product vision
 
-## 2. Target audience
+Meducktion is a colorful 2–4 player medical deduction card game for people with little or no medical knowledge. Everyone investigates the same fictional patient, plays one investigation card per round, receives clues, and decides when to diagnose one of four possible conditions. Highest score wins.
 
-- General players interested in medical mysteries
-- Students considering medicine or health sciences
-- Early health-science learners
-- Players who enjoy cooperative deduction and strategy
+The experience should feel like a polished deduction card game, light competitive party game, and cozy medical mystery. Learning is a welcome result of play, not an examination of prior medical knowledge.
 
-The game should welcome players without medical knowledge through plain language and optional definitions. Performance, scores, and progression must never imply that a player is medically competent or qualified to diagnose or treat real people.
+## 3. Target audience
 
-## 3. Product goals
+- Teen and adult casual players
+- Friends playing together
+- Players who enjoy deduction, card, and party games
+- Players curious about medical mysteries
+- Players with no medical background
 
-- Be easy to understand in the first session and strategically rich at higher difficulties.
-- Be replayable through authored cases, variants, meaningful tradeoffs, and multiplayer discussion.
-- Present a polished, distinctive visual identity on desktop and mobile browsers.
-- Make cooperative play the primary social experience while supporting solo and practice play.
-- Be educational and medically responsible without sacrificing entertainment.
-- Remain free to host and operate at MVP scale using Firebase Spark-compatible services and bundled assets.
+The game does not assume knowledge of differentials, medical abbreviations, laboratory terminology, clinical urgency, treatment planning, or evidence grading. Main-interface language explains everything needed to play.
 
-## 4. Non-goals
+## 4. Product goals
 
-- Real-world diagnosis, medical advice, certification, or proof of clinical competence
-- Detailed medication dosing or procedural medical instruction
-- A realistic hospital or electronic-medical-record simulation
-- Public ranked matchmaking in the MVP
-- Live AI-generated or user-created medical cases in the MVP
-- Voice or video chat
-- Graphic medical content
+- Explain the complete loop to a first-time player in under one minute.
+- Deliver a satisfying 6–10 minute match with meaningful deduction and limited luck.
+- Center competition while avoiding elimination or rewards for unsafe real-world behavior.
+- Make clues, cards, and four condition choices readable on desktop and mobile.
+- Preserve medically coherent authored content and explain the answer in beginner-friendly language.
+- Reproduce a match from the same seed, content version, players, and commands.
+- Keep active game rules independent of React and future networking.
 
-## 5. Core gameplay loop
+## 5. Non-goals
 
-Each Care Interval follows:
+- Medical advice, diagnosis, clinical training, certification, or proof of competence
+- Realistic hospital, electronic-record, treatment-management, or patient-stability simulation
+- Detailed medication dosing or procedural instruction
+- Online rooms, Firebase networking, authentication, matchmaking, or ranked play in the local slice
+- Complex AI, bluffing, player-authored clue text, or AI-generated live cases
+- Graphic medical content, strict timers, voice/video chat, or paid services
 
-```text
-Patient update
-→ Differential review
-→ Action planning
-→ Lock actions
-→ Resolve actions
-→ Reveal evidence and results
-→ Update patient stability
-→ Decision window
-→ Continue or submit Case Call
-```
-
-Canonical phase state machine:
+## 6. Core competitive loop
 
 ```text
-lobby
-→ case_intro
-→ planning
-→ actions_locked
-→ resolving
-→ results_reveal
-→ decision
-→ planning
-→ case_complete
+Meet the patient
+→ receive three cards
+→ choose and lock one card
+→ reveal all players' cards
+→ receive clues
+→ review four possible conditions
+→ diagnose or continue
+→ draw back to three cards
+→ repeat for up to four rounds
+→ compare scores
 ```
 
-Only valid transitions are permitted. The `decision → planning` transition starts another interval; `decision → case_complete` follows a final Case Call or terminal outcome.
+MVP defaults are four rounds, a three-card starting hand, one card per player per round, one free redraw, diagnosis unlocked after Round 2, no more than two diagnosis attempts, and no strict timer. The local test setup is one human versus one deterministic Balanced bot; the state model supports 2–4 players.
 
-## 6. Main objective
+## 7. Cards and information
 
-Players identify the most likely diagnosis, correct urgency, and safest next step while keeping the fictional patient above the failure threshold. Good play uses relevant evidence, considers a dangerous alternative, limits unnecessary testing, and avoids harmful actions or preventable delay.
+Only four categories are active:
 
-## 7. Hidden case structure
+- **Ask:** patient history and symptoms.
+- **Check:** simple physical findings or observations.
+- **Test:** stronger objective clues that resolve in the reveal round.
+- **Special:** no more than five simple draw, swap, repeat, opinion, or sharing effects.
 
-Every versioned case contains a true diagnosis, presentation variant, severity stage, patient profile, chief complaint, starting evidence, differential pool, discoverable clues, available tests, treatment effects, progression track, complication triggers, valid final outcomes, educational debrief, and source/review metadata. Stable IDs connect authored content to engine rules. Player-facing state never exposes hidden answers before completion.
+Each card is a stable, case-compatible data definition with display copy, icon key, result/effect, visibility, and duplicate policy. Each opening hand guarantees an Ask, a Check, and a Test or Special. Test cards are less common than Ask and Check cards. After two rounds without a meaningful undiscovered clue, deterministic bad-luck protection favors a useful compatible draw.
 
-## 8. Player actions
+The patient, starting information, conditions, round, shared event, public clues, played card categories, and diagnosis status are public. Hands, private clue text, diagnosis choices, and unused redraws remain private until the results recap. The interface never reveals an opponent's private clue during active play.
 
-Action categories are Interview, Examine, Monitor, Test, Treat or Stabilize, Consult, and Call the Case. Most actions cost Focus; players normally receive **2 Focus per Care Interval**. Actions are planned locally and have no game effect until deliberately locked. The action economy should force prioritization without making one early choice irrecoverable in Guided difficulty.
+## 8. Controlled randomness
 
-## 9. Evidence system
+The three MVP randomness sources are independently shuffled player decks, one authored case variant, and one shared event in Round 2 or 3. A stored seed drives all three plus bot tie-breaks. The engine does not use uncontrolled `Math.random()`.
 
-Each clue may define category, strength, reliability, direction, timing, source, visibility, and red-flag status.
+Randomness may change deck order, draws, event, and route to useful evidence. It never changes the hidden diagnosis, medical relationship of a clue, authored card result, correctness, or scoring. Fixed inputs and commands must reproduce identical state.
 
-- **Categories:** History, Symptom, Vital sign, Examination, Laboratory, Imaging, Treatment response, Complication
-- **Strength:** Weak, Moderate, Strong, Defining
-- **Relationship:** Supports, Conflicts, Unresolved
+## 9. Round lifecycle
 
-Direction is diagnosis-relative: the same clue can support one diagnosis, conflict with another, and leave a third unresolved. Reliability and timing communicate limitations. The game must not present fake numerical diagnostic probabilities, and it must not reduce evidence to binary YES/NO piles.
+```text
+match_intro
+→ round_draw
+→ card_selection
+→ cards_locked
+→ card_reveal
+→ clue_review
+→ diagnosis_window
+→ next_round
+→ match_complete
+```
 
-## 10. Differential diagnosis
+A player may change a selection before locking. Selection and locking do not reveal or resolve a card. Once all active players lock, the reveal applies card effects, routes clues by visibility, and resolves the shared event at its authored round. Active players draw back to three. Diagnosed players remain visible as spectators while the match finishes.
 
-Each player or team maintains a ranked differential with confidence levels: Unlikely, Possible, Plausible, Leading, and Highly supported. A complete Case Call requires at least two supporting clues from at least two evidence categories, one major alternative, and a reason that alternative is less likely.
+The match ends when every player has made a final diagnosis or after Round 4 and its final diagnosis window.
 
-Diagnoses may carry **Must Exclude**, **High danger**, or **Time sensitive** markers. These labels affect safety feedback and serious-alternative checks; they do not reveal the true diagnosis.
+## 10. Diagnosing and scoring
 
-## 11. Tests
+A valid diagnosis chooses one of the four conditions and two distinct clues available to that player. A correct player cannot resubmit. A first wrong answer subtracts 150 points and blocks another attempt until the next round. A second wrong answer subtracts another 150 and exhausts attempts. No player is eliminated.
 
-Every test defines Focus cost, Care Budget cost, result delay, patient burden, result content, duplicate-test rule, and evidence yield. No more than two major tests should be pending initially. Delays consume meaningful game time, duplicate orders are prevented or penalized, and low-value testing consumes resources so that ordering everything is never optimal.
-
-## 12. Treatments
-
-Treatments may be stabilizing, condition-specific, neutral, or harmful/contraindicated. MVP content uses broad treatment categories such as supportive fluids or urgent escalation, not medication doses or procedural instructions. Treatment response can become evidence but should not be portrayed as definitive in isolation.
-
-## 13. Patient stability
-
-Stability ranges from 0 to 100:
-
-| Score | State |
-|---:|---|
-| 76–100 | Stable |
-| 51–75 | Guarded |
-| 26–50 | Unstable |
-| 1–25 | Critical |
-| 0 | Case failure |
-
-Deterioration primarily results from authored disease progression, delay, ignored warnings, harmful actions, or triggered complications. Major changes must be explainable from the case state; unexplained severe random deterioration is prohibited.
-
-## 14. Complications
-
-Complications are authored, non-graphic, connected to delay or decisions, relevant to the case, and usually telegraphed before major deterioration. A warning may be a red-flag clue, trend, patient update, or explicit Guided-mode safety prompt. Complications should create decisions, not surprise punishment.
-
-## 15. Winning and losing
-
-Cooperative victory requires a correct diagnosis, correct urgency, acceptable next step, and patient stability above the failure threshold. Outcome bands are Excellent resolution, Safe resolution, Correct but inefficient, Correct diagnosis with poor patient outcome, Safe stabilization without final diagnosis, Incorrect diagnosis, and Critical failure. The results screen explains both the clinical-fiction outcome and the decisions that produced it.
-
-## 16. Scoring
-
-Maximum score is **1,000 points**:
+Maximum score is 1,000:
 
 | Category | Points |
 |---|---:|
-| Correct diagnosis | 350 |
-| Patient safety and final stability | 200 |
-| Evidence-based reasoning | 150 |
-| Correct urgency and next step | 150 |
-| Testing and resource efficiency | 100 |
-| Speed or coordination | 50 |
+| Correct diagnosis | 500 |
+| Two legitimate supporting clues | 200 |
+| Timing: Round 2 / 3 / 4 | 150 / 100 / 50 |
+| Efficient investigation | 100 |
+| One special achievement | 50 |
 
-Illustrative, case-tunable penalties include: incorrect Case Call −100 escalating on repeated calls; unnecessary major test −15 to −40; duplicate test −20; harmful treatment −75 to −200; ignored danger sign −50; delay-caused complication −50 to −150; and critical deterioration up to the full 200-point safety loss. Penalties must be disclosed, deterministic from authored rules, bounded within the category totals, and never reduce the overall score below zero.
+Wrong-attempt penalties apply after category scoring; the result is clamped to 0–1,000. Ties break by earlier correct round, fewer wrong attempts, then more valid supporting clues. An exact tie uses a deterministic mystery draw derived from the match seed, producing one winner without favoring submission or player order.
 
-## 17. Game modes
+## 11. First case
 
-**MVP:** Solo, cooperative private rooms, and Practice mode.  
-**Later:** Competitive Ward Race, Grand Rounds social mode, public matchmaking, and ranked play.
+`The Pain That Moved` retains fictional patient Jordan Lee, age 20, with stomach pain and nausea. The four beginner choices are Appendicitis, Stomach infection, Urinary infection, and Kidney stone. Stable case and clue IDs, content versions, source metadata, and review status remain intact.
 
-Cooperative play is the primary multiplayer mode. Competitive modes must not reward unsafe haste.
+Main clues use plain language, including pain beginning near the middle, moving to the lower-right, appetite change, no diarrhea, lower-right tenderness, mild fever, and carefully phrased blood, urine, and ultrasound findings. Detailed terminology belongs only in optional reviewed explanations. The case remains pending professional medical review before public release.
 
-## 18. Difficulty levels
+## 12. Main product surfaces
 
-- **Guided:** plain-language terms, three differential choices where the case allows, evidence hints, generous resources, strong warnings, no forced timer.
-- **Standard:** four or five choices, less explicit guidance, constrained resources, some equivocal findings, optional timer.
-- **Expert (later):** atypical presentations, comorbidities, more alternatives, greater uncertainty, faster progression, fewer warnings.
+- **Home:** wordmark, tagline, Play, How to Play, secondary Practice, artwork, and disclaimer.
+- **Match setup:** player name, local bot opponent, selected case, short rules, and Start Match.
+- **Patient introduction:** prominent portrait/story, four condition cards, four-round indicator, and Deal Cards.
+- **Match:** patient header, round/event status, conditions, public clues, reveal area, opponent status, hand, redraw, Lock, Reveal, and Diagnose.
+- **Diagnosis:** four conditions, known clue choices, attempts remaining, consequence, accessible errors, and confirmation.
+- **Results:** winner, rankings, score categories, penalties, investigation paths, simple medical explanation, and Play Again.
+- **Tutorial:** at most six skippable/replayable panels covering the complete loop and scoring stakes.
 
-Difficulty changes guidance and complexity, not the medical truth or disclaimer.
+Firebase room controls do not appear in the local slice.
 
-## 19. Doctor roles
+## 13. Visual and accessibility requirements
 
-Post-MVP possibilities include Acute Care, Diagnostic Specialist, Laboratory Specialist, Imaging Specialist, Medication Specialist, and Population Health Specialist. Roles may organize information, reduce particular costs, or improve coordination; they must not directly reveal the diagnosis or make one role essential.
+The visual tone is approximately 40% playful, 30% cozy, 20% mysterious, and 10% medical. Use an illustrated patient, cozy clinic atmosphere, warm surfaces, soft gradients, large colorful cards, rounded condition tiles, friendly icons, expressive avatars, clear round progress, gentle animation, and restrained winner celebration. Avoid dense clinical dashboards, alarm styling, tiny labels, graphic anatomy, and persistent developer data.
 
-## 20. Anti-random-guessing rules
+Every category has a text label and icon in addition to color. Provide semantic headings/buttons, keyboard card selection, visible focus, live reveal/error announcements, reduced motion, touch targets, text zoom, selected/locked text states, accessible forms, and no required drag-and-drop.
 
-- Enforce Case Call evidence requirements and serious-alternative reasoning.
-- Escalate penalties for incorrect repeated calls.
-- Limit Focus and Care Budget.
-- Limit pending tests and apply authored result delays.
-- Prevent or penalize duplicate tests and score inefficient testing.
-- Require deliberate action locking and validate complete final submissions.
+## 14. Architecture and persistence requirements
 
-## 21. Visual identity
+Active gameplay uses a new framework-independent card engine with strict serializable state, immutable transitions, one public command function, deterministic bots, seeded random state, structured errors/events, and revisioned replay. React only renders state and dispatches commands through the session layer.
 
-Tone is approximately **60% sleek, 25% playful, 15% mysterious**. Use a dark clinical-mystery dashboard, stylized patient illustrations, color-coded evidence cards, animated pulse/signal motifs, rounded panels, and strong hierarchy. Avoid realistic hospital-record styling and graphic imagery.
+The previous Care Interval engine is isolated legacy code and is not an active UI dependency. Legacy tests may remain until deliberate removal. Current card snapshots use `meducktion:card-match`, pin seed and schema/content/variant versions, preserve hands/deck positions/clues/attempts/scores/revision/idempotency, and exclude temporary UI state. Former `meducktion:solo-session` snapshots are detected as incompatible rules and handled with a clear new-match path rather than reinterpreted.
 
-| Token | Color |
-|---|---|
-| Background | `#0B1220` |
-| Elevated panel | `#111C2E` |
-| Primary cyan | `#36D6E7` |
-| Stable teal | `#22C7A9` |
-| Uncertain amber | `#F4B942` |
-| Danger coral | `#FF6B6B` |
-| Laboratory violet | `#9B87FF` |
-| Imaging blue | `#5BA7FF` |
-| Primary text | `#F5F7FA` |
-| Secondary text | `#A7B2C3` |
+## 15. Local bots and future multiplayer
 
-## 22. Web UI structure
+The Balanced bot uses only its own hand/private clues and public information, prefers undiscovered meaningful clues, follows normal validation, and uses seeded tie-breaking. It is deliberately simple and deterministic.
 
-Desktop uses patient status on the left, evidence workspace in the center, differential/actions on the right, and player status along the bottom. Mobile uses four primary destinations: Patient, Evidence, Differential, and Actions, with persistent safety and phase status.
+The engine is transport-agnostic. Future Firebase code may synchronize validated commands and versioned snapshots, enforce revisions/idempotency, and manage rooms/presence. It may not duplicate rule resolution, bot reasoning, private-clue visibility, or scoring. Firebase, authentication, and online multiplayer are not implemented in this refactor.
 
-Important screens are Home, Mode selection, Lobby, Case introduction, Main game, Patient view, Evidence panel, Test panel, Treatment panel, Diagnosis panel, Results, Tutorial, and—later—Profile/progression and Case library.
+## 16. Medical responsibility
 
-## 23. Accessibility
+Cases must be authored, source-supported, versioned, internally consistent, reviewed before public release, and explicit about simplifications. Avoid dosing, personalized advice, certainty from one clue, and claims that the game replaces professional care. Show the disclaimer on the home/onboarding experience, patient introduction, and debrief.
 
-Provide keyboard navigation, visible focus states, screen-reader labels, reduced motion, non-color status indicators, large touch targets, text scaling, no hover-only actions, sound-independent feedback, optional timers, plain-language terms, expandable definitions, non-drag alternatives, and responsive mobile layouts. Accessibility acceptance checks belong in each feature, not only a final audit.
-
-## 24. Medical responsibility
-
-Cases must be authored, source-supported, versioned, internally consistent, reviewed before public release, and explicit about simplifications. Source/reviewer metadata should include review status and dates. AI may assist drafting, but unreviewed AI-generated cases cannot appear in public or ranked play.
-
-Avoid detailed dosing, personalized advice, certainty based on one clue, claims that a clue always proves/excludes a condition, and any suggestion that the game replaces professional care. The fictional-game disclaimer must be prominent in the PRD, onboarding, case introduction, and debrief.
-
-## 25. Risks and mitigations
+## 17. Risks and mitigations
 
 | Risk | Mitigation |
 |---|---|
-| Medical misinformation | Reviewed, sourced, versioned authored cases; visible simplifications and disclaimer |
-| Excessive complexity | Guided onboarding, progressive disclosure, limited first differential |
-| Quiz-like experience | Choice-driven discovery, uncertain evidence, resource and safety tradeoffs |
-| Test-spamming | Focus/Budget costs, delays, queue limit, duplicate prevention, efficiency scoring |
-| Competitive speed rewards unsafe decisions | Safety-weighted scoring and no ranked competitive MVP |
-| Firebase free-tier overuse | Compact snapshots, transition-only writes, expiry, budgets and monitoring |
-| Client-side cheating | Honest limitation; private/co-op MVP; server-authoritative ranked play later |
-| Large case-authoring workload | Schema, templates, validation, staged review, limited initial content |
-| Mobile UI overcrowding | Four-tab structure, progressive disclosure, device testing |
-| Inconsistent AI-generated art | Art direction, curated bundled assets, human review, consistent asset pipeline |
-| Scope creep | One-case vertical slice, explicit exclusions, phase gates and acceptance criteria |
+| Medical misinformation | Reviewed, sourced, versioned authored content and visible disclaimer |
+| Beginner overload | Four card types, four conditions, three-card hands, plain language, short tutorial |
+| Luck dominates | Seeded decks, opening guarantee, redraw, useful-draw protection, fixed truth |
+| Private information leaks | Explicit visibility model and per-player selectors/session views |
+| First correct player always wins | Multi-category scoring and deterministic tie-breaks |
+| Legacy complexity returns | Separate active namespace and explicit legacy boundary |
+| Client-side cheating | Accept for local play; define authoritative security before networking |
+| Name conflicts | Complete trademark, domain, social, store, and platform review before release |
 
-## Open product decisions
+## 18. Historical decisions retained or superseded
 
-- Final Focus and Care Budget costs require paper playtesting.
-- Practice mode's relationship to scoring and progression needs definition.
-- Team ownership versus per-player ownership of the ranked differential needs usability testing.
-- Medical reviewer qualifications, approval workflow, and content update policy must be established before public release.
+| Prior decision | Current status |
+|---|---|
+| Authored, validated, versioned cases and stable IDs | Retained |
+| Deterministic immutable rules and structured errors/events | Retained and adapted |
+| Plain language, accessibility, disclaimer, medical review gate | Retained |
+| Version-pinned local persistence | Retained with a new card-match snapshot/key |
+| Cooperative play as the primary mode | Superseded by competitive 2–4 player play |
+| Focus, Care Budget, stability, progression, delayed tests, treatments | Superseded; legacy engine only |
+| Ranked differential and full Case Call with urgency/next step | Superseded by four choices plus two clues |
+| Clinical safety-weighted 1,000-point score | Superseded by competitive five-category scoring |
+| Dark clinical-dashboard visual identity | Superseded by warm, cozy card-game presentation |
+| Firebase-first room implementation | Deferred behind a transport-agnostic local engine/session boundary |
+
+The stable `CASE_SIGNAL_*` filenames remain to avoid breaking repository links. Where the historical decision log, paper playtest, legacy engine contract, architecture plan, or first UI slice conflicts with this PRD and [the refactor document](MEDUCKTION_CARD_GAME_REFACTOR.md), those older requirements are historical rather than active.

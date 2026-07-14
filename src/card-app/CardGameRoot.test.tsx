@@ -1,0 +1,47 @@
+// @vitest-environment jsdom
+import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import "@testing-library/jest-dom/vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { CARD_MATCH_STORAGE_KEY } from "../card-match-session";
+import { CardGameRoot } from "./CardGameRoot";
+
+afterEach(() => { cleanup(); localStorage.clear(); });
+
+async function openMatch() {
+  const user = userEvent.setup();
+  render(<CardGameRoot />);
+  await user.click(screen.getByRole("button", { name: "Play Local" }));
+  await user.click(screen.getByRole("button", { name: "Start Match" }));
+  await user.click(screen.getByRole("button", { name: "Deal Cards" }));
+  return user;
+}
+
+describe("player-facing card table", () => {
+  it("opens and exits the online lobby without initializing a match", async () => {
+    const user = userEvent.setup();
+    render(<CardGameRoot />);
+    await user.click(screen.getByRole("button", { name: "Play Online" }));
+    expect(screen.getByRole("heading", { name: "Meet around the same mystery" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByRole("heading", { name: "Can you crack the case first?" })).toBeInTheDocument();
+  });
+
+  it("mounts the active card controller into the tabletop screen", async () => {
+    await openMatch();
+    expect(screen.getByLabelText("Meducktion card table")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /card:/i })).toHaveLength(3);
+    expect(screen.getByLabelText("Three face-down opponent cards").children).toHaveLength(3);
+    expect(localStorage.getItem(CARD_MATCH_STORAGE_KEY)).toContain('"phase":"card_selection"');
+  });
+
+  it("keeps selection, locking, and reveal as separate controller commands", async () => {
+    const user = await openMatch();
+    const card = screen.getAllByRole("button", { name: /card:/i })[0]!;
+    await user.click(card);
+    expect(card).toHaveAttribute("aria-pressed", "true");
+    await user.click(screen.getByRole("button", { name: "Lock Card" }));
+    expect(screen.getAllByRole("button", { name: /card:/i })).toHaveLength(3);
+    expect(screen.getByRole("button", { name: "Reveal Cards" })).toBeInTheDocument();
+  });
+});

@@ -1,0 +1,38 @@
+{
+  "name": "meducktion",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "validate:cases": "vitest run src/case-content/validateCases.test.ts src/identity-content/validate.test.ts",
+    "test:multiplayer": "vitest run src/multiplayer-room/protocol.test.ts",
+    "test:firebase-rules": "firebase emulators:exec --only firestore --project demo-meducktion \"vitest run --config vitest.firebase.config.ts\"",
+    "firebase:emulators": "firebase emulators:start --project demo-meducktion"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.4",
+    "firebase-tools": "^15.23.0",
+    "jsdom": "^26.1.0",
+    "typescript": "^5.8.0",
+    "vite": "^7.3.6",
+    "vitest": "^3.2.0"
+  },
+  "dependencies": {
+    "firebase": "^12.16.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  }
+}
