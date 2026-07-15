@@ -4,11 +4,11 @@
 
 Meducktion now uses a direct deduction race instead of point scoring. A player may diagnose during any card-selection or diagnosis window, including Round 1. The first correct diagnosis ends the match immediately and is the sole winner. Submission order matters only when a correct command is accepted; there is no score calculation or first-place tie. On the first wrong diagnosis, the player chooses whether to hide their YES or NO evidence pile. The second wrong diagnosis hides both piles. The third eliminates that player. Each wrong guess blocks another attempt until the next round.
 
-The authored draft catalog contains 25 fictional scenarios. Every scenario presents eight plausible, deliberately overlapping possibilities and uses the same 24 generic symptom and homeostasis questions. Four core conditions are authored per scenario; four additional distractors are selected deterministically from the most similar symptom profiles. The eight choices are shuffled from the match seed, so the answer position varies between matches while remaining identical for every player and stable after refresh. Every question produces a private YES or NO answer. Each player deck contains exactly one copy of each question, so a player cannot draw a duplicate card during a match. The consistent vocabulary is intentional: players learn the deck while different combinations of answers create the deduction challenge. Three blind guesses can cover at most 37.5% of the diagnosis pool, with escalating evidence loss after each miss.
+The authored draft catalog contains 25 fictional scenarios. Every scenario presents eight plausible, deliberately overlapping possibilities and uses the same 24 generic symptom and homeostasis questions. Up to four core conditions are authored per scenario; any condition with an identical 24-answer profile is excluded from that match, then the closest distinct reviewed profiles fill the eight-option differential. The eight choices are shuffled from the match seed, so the answer position varies between matches while remaining identical for every player and stable after refresh. Every question produces a private YES or NO answer. Each player deck contains exactly one copy of each question, so a player cannot draw a duplicate card during a match. The consistent vocabulary is intentional: players learn the deck while different combinations of answers create the deduction challenge. Three blind guesses can cover at most 37.5% of the diagnosis pool, with escalating evidence loss after each miss.
 
 Players do not choose from or preview named scenarios. Local matches draw a case from the 25-case catalog using the match seed, and online rooms derive the same hidden draw from the room code so every client receives the identical case. The patient and mystery are revealed only after the match starts; authored case titles remain internal content metadata.
 
-The expanded profiles are marked `medicalReviewRequired`. Their symptom relationships, difficulty, ambiguity, answer balance, and bot behavior require structured playtesting and medical review before public release.
+The expanded profiles are marked `medicallyApproved` following the July 2026 review. Difficulty, ambiguity, answer balance, and bot behavior still require structured playtesting.
 
 **Status:** Current product and architecture direction
 
@@ -26,7 +26,7 @@ Locking remains reversible while another player is still choosing. When the fina
 
 Question cards use short, generic symptom and homeostasis checks such as `Fever?`, `Nausea?`, `Urine clear?`, `Blood sugar normal?`, and `Cough?`. Their case-specific YES or NO answer is fixed case content, never random medical truth. Ask, Check, and Test are presentation types only; the active decks contain no Special cards and no cards that directly reveal the diagnosis.
 
-Twenty-five fictional deduction cases are currently registered. They share a 24-question vocabulary but use different overlapping answer profiles and eight-condition sets. All case content remains blocked on professional medical review and balance playtesting before public release.
+Twenty-five fictional deduction cases are currently registered. They share a 24-question vocabulary but use different overlapping answer profiles and eight-condition sets. Their medical profiles are approved; balance and clarity remain subject to playtesting.
 
 ### Card and table polish
 
@@ -234,9 +234,9 @@ Active matches now maintain presence in a dedicated Firestore subcollection so h
 
 ## First converted case
 
-`The Pain That Moved` retains Jordan Lee, age 20, and an authored appendicitis answer. The beginner answer set is Appendicitis, Stomach infection, Urinary infection, and Kidney stone. Plain-language clue cards adapt the validated history, movement of pain, appetite, diarrhea, lower-right tenderness, mild fever, blood, urine, and ultrasound findings. Detailed terms may appear only in optional reviewed explanations.
+`The Pain That Moved` retains Jordan Lee, age 19, and an authored appendicitis answer. Its authored differential begins with Appendicitis, Viral gastroenteritis, Urinary infection, and Kidney stone. Because the reviewed Appendicitis and Viral gastroenteritis profiles are identical across the current 24 questions, Viral gastroenteritis is excluded from this particular match and the catalog fills all remaining slots with the closest distinct reviewed profiles. The current YES/NO profiles reflect the medically approved July 2026 review recorded in `MEDUCKTION_MEDICAL_CONTENT_REVIEW.md`.
 
-Stable case and clue IDs remain unchanged unless a deliberate content migration is versioned and documented. The case remains fictional and requires medical review before public release.
+Stable case and clue IDs remain unchanged unless a deliberate content migration is versioned and documented. The cases remain fictional and are not medical advice.
 
 ## Small polish pass
 
@@ -269,7 +269,7 @@ Remaining v2 work is deliberately staged rather than folded into this narrow eng
 - Bot behavior is intentionally simple and is not a competitive production AI.
 - The first case provides limited replay variety; additional variants require medically responsible authoring and review.
 - The competitive 2–4 player flow still needs broader real-device latency, disconnect, and refresh playtesting.
-- Professional medical review and release authority remain pending.
+- Medical profile review is complete; balance and clarity remain subject to playtesting.
 - Accessibility and responsive behavior require continued manual browser verification in addition to automated tests.
 - Client-side game state is inspectable; future online competitive integrity needs an authoritative design.
 - Meducktion is a working title and still requires trademark, domain, social-handle, app-store, and other platform-availability review before public release.

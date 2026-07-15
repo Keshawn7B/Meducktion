@@ -13,7 +13,7 @@ afterEach(() => {
 
 const conditions = [
   { id: "condition.appendicitis", displayName: "Appendicitis", icon: "A", learnMore: "Irritation of the appendix." },
-  { id: "condition.stomach-infection", displayName: "Stomach infection", icon: "S" },
+  { id: "condition.stomach-infection", displayName: "Viral gastroenteritis", icon: "V" },
   { id: "condition.urinary-infection", displayName: "Urinary infection", icon: "U" },
   { id: "condition.kidney-stone", displayName: "Kidney stone", icon: "K" },
 ] as const;
@@ -234,7 +234,7 @@ describe("competitive card-game UI", () => {
     const calls = actions();
     render(<CardApp model={model("patient_intro")} actions={calls} />);
     expect(screen.getByRole("heading", { name: "Jordan Lee" })).toBeInTheDocument();
-    expect(screen.getAllByText(/Appendicitis|Stomach infection|Urinary infection|Kidney stone/)).toHaveLength(4);
+    expect(screen.getAllByText(/Appendicitis|Viral gastroenteritis|Urinary infection|Kidney stone/)).toHaveLength(4);
     await user.click(screen.getByRole("button", { name: "Deal Cards" }));
     expect(calls.dealCards).toHaveBeenCalledOnce();
   });

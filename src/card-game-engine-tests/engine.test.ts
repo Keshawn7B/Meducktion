@@ -19,6 +19,9 @@ import {
 } from "../card-game-engine";
 
 const content = thePainThatMovedCardCase;
+const wrongConditionIds = content.conditions
+  .map((condition) => condition.id)
+  .filter((conditionId) => conditionId !== content.correctConditionId);
 const twoHumans: MatchPlayerSetup[] = [
   { id: "player.one", displayName: "One", kind: "human" },
   { id: "player.two", displayName: "Two", kind: "human" },
@@ -578,7 +581,7 @@ describe("diagnosis race", () => {
     state = run(state, {
       type: "SUBMIT_DIAGNOSIS",
       playerId: "player.one",
-      conditionId: "diagnosis.gastroenteritis",
+      conditionId: wrongConditionIds[0]!,
       clueIds: supportClues,
     });
     expect(state.players["player.one"]?.diagnosisAttemptsUsed).toBe(1);
@@ -685,7 +688,7 @@ describe("diagnosis race", () => {
     state = run(state, {
       type: "SUBMIT_DIAGNOSIS",
       playerId: "player.one",
-      conditionId: "diagnosis.gastroenteritis",
+      conditionId: wrongConditionIds[0]!,
       clueIds: supportClues,
     });
     state.currentRound = 3;

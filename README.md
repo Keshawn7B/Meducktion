@@ -43,6 +43,7 @@ The checked-in Firestore rules are deployed to the `meducktion` Firebase project
 ## Current product documentation
 
 - [Identity-casual game refactor](docs/MEDUCKTION_CARD_GAME_REFACTOR.md)
+- [Medical content review packet](docs/MEDUCKTION_MEDICAL_CONTENT_REVIEW.md)
 - [Product requirements](docs/CASE_SIGNAL_PRD.md)
 - [MVP specification](docs/CASE_SIGNAL_MVP.md)
 - [Case authoring guide](docs/CASE_SIGNAL_CASE_AUTHORING.md)
@@ -62,4 +63,4 @@ The stable `CASE_SIGNAL_*` filenames are intentionally retained to avoid breakin
 
 ## Release status
 
-All 25 cases remain pending professional medical review and balance playtesting. Meducktion is an official working title, not a cleared public name; trademark, domain, social-handle, app-store, and other platform availability must be reviewed before release.
+All 25 cases use medically reviewed fictional profiles. Balance and clarity still require ongoing playtesting. Meducktion is an official working title, not a cleared public name; trademark, domain, social-handle, app-store, and other platform availability must be reviewed before release.

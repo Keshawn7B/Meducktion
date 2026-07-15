@@ -8,17 +8,19 @@ import {
 import { createCardMatch, getCompatibleCards } from "../card-game-engine";
 
 describe("competitive card content", () => {
-  it("preserves the four authored Jordan Lee choices and adds plausible distractors", () => {
+  it("preserves distinct authored Jordan Lee choices and excludes an identical profile", () => {
     expect(cardCaseRegistry).toContain(thePainThatMovedCardCase);
     expect(thePainThatMovedCardCase.patient.displayName).toBe("Jordan Lee");
     expect(
       thePainThatMovedCardCase.conditions.map((condition) => condition.displayName),
     ).toEqual(expect.arrayContaining([
       "Appendicitis",
-      "Stomach infection",
       "Urinary infection",
       "Kidney stone",
     ]));
+    expect(
+      thePainThatMovedCardCase.conditions.map((condition) => condition.displayName),
+    ).not.toContain("Viral gastroenteritis");
     expect(thePainThatMovedCardCase.conditions).toHaveLength(8);
   });
 
@@ -49,7 +51,8 @@ describe("competitive card content", () => {
     expect(thePainThatMovedCardCase.correctConditionId).toBe(
       "diagnosis.appendicitis",
     );
-    expect(thePainThatMovedCardCase.contentVersion).toContain("expanded-diagnosis");
+    expect(thePainThatMovedCardCase.contentVersion).toContain("medically-approved-profiles");
+    expect(thePainThatMovedCardCase.status).toBe("medicallyApproved");
   });
 
   it("uses only Ask, Check, and Test question categories", () => {
@@ -82,6 +85,48 @@ describe("competitive card content", () => {
       );
       expect(new Set(profiles).size).toBe(8);
     }
+  });
+
+  it("applies the reviewed terminology and high-priority homeostasis decisions", () => {
+    const allConditionNames = new Set(
+      cardCaseRegistry.flatMap((cardCase) =>
+        cardCase.conditions.map((condition) => condition.displayName),
+      ),
+    );
+    expect(allConditionNames.has("Inner-ear vertigo")).toBe(true);
+    expect(allConditionNames.has("Panic attack")).toBe(true);
+    expect(allConditionNames.has("Acute sinusitis")).toBe(true);
+    expect(allConditionNames.has("Viral gastroenteritis")).toBe(true);
+    expect(allConditionNames.has("Inner-ear issue")).toBe(false);
+    expect(allConditionNames.has("Panic episode")).toBe(false);
+
+    const answerFor = (conditionName: string, question: string) => {
+      const cardCase = cardCaseRegistry.find((candidate) =>
+        candidate.conditions.some((condition) => condition.displayName === conditionName),
+      );
+      const condition = cardCase?.conditions.find(
+        (candidate) => candidate.displayName === conditionName,
+      );
+      const clue = cardCase?.clues.find((candidate) => candidate.question === question);
+      if (!condition || !clue) throw new Error(`Missing reviewed profile fixture: ${conditionName}`);
+      return clue.supportsConditionIds.includes(condition.id)
+        ? clue.answer
+        : clue.answer === "yes" ? "no" : "yes";
+    };
+
+    expect(answerFor("Low blood sugar", "Is the blood sugar reading in the expected range?")).toBe("no");
+    for (const condition of ["Dehydration", "Heat exhaustion", "Kidney stone", "Urinary infection"]) {
+      expect(answerFor(condition, "Is the urine sample clear?")).toBe("no");
+    }
+    for (const condition of ["Allergic reaction", "Asthma flare", "Influenza-like illness", "Pneumonia"]) {
+      expect(answerFor(condition, "Is the oxygen reading in the expected range?")).toBe("no");
+    }
+    expect(answerFor("Contact dermatitis", "Are the patient's eyes itchy?")).toBe("no");
+    expect(
+      cardCaseRegistry.every((cardCase) =>
+        cardCase.educationalExplanation.includes("Another person with the same condition"),
+      ),
+    ).toBe(true);
   });
 
   it("excludes cards that are incompatible with the active case", () => {
