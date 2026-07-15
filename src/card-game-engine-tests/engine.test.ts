@@ -800,6 +800,69 @@ describe("balanced bot and player views", () => {
     expect(next.players["player.bot-balanced"]?.diagnosisSubmissions).toEqual([]);
   });
 
+  it("makes seeded, imperfect guesses even with a clear evidence leader", () => {
+    const guesses = new Set<string>();
+
+    for (let index = 0; index < 40; index += 1) {
+      const state = createCardMatch(content, {
+        seed: `fallible-bot-${index}`,
+        players: humanAndBot,
+      });
+      state.phase = "diagnosis_window";
+      state.currentRound = 2;
+      for (const clueId of supportingClueIds) {
+        state.players["player.bot-balanced"]?.privateClues.push({
+          clueId,
+          round: 2,
+          sourceId: "bot-fixture",
+          visibility: "private",
+          playerId: "player.bot-balanced",
+        });
+      }
+
+      const next = run(state, { type: "CONTINUE_FROM_DIAGNOSIS" });
+      const guess = next.players["player.bot-balanced"]?.diagnosisSubmissions[0]
+        ?.conditionId;
+      if (guess !== undefined) {
+        guesses.add(guess);
+      }
+    }
+
+    expect(guesses).toContain(content.correctConditionId);
+    expect(
+      [...guesses].some(
+        (conditionId) => conditionId !== content.correctConditionId,
+      ),
+    ).toBe(true);
+  });
+
+  it("repeats the same bot diagnosis for the same seed and state", () => {
+    const makeState = () => {
+      const state = createCardMatch(content, {
+        seed: "repeatable-fallible-bot",
+        players: humanAndBot,
+      });
+      state.phase = "diagnosis_window";
+      state.currentRound = 2;
+      for (const clueId of supportingClueIds) {
+        state.players["player.bot-balanced"]?.privateClues.push({
+          clueId,
+          round: 2,
+          sourceId: "bot-fixture",
+          visibility: "private",
+          playerId: "player.bot-balanced",
+        });
+      }
+      return state;
+    };
+
+    const first = run(makeState(), { type: "CONTINUE_FROM_DIAGNOSIS" });
+    const second = run(makeState(), { type: "CONTINUE_FROM_DIAGNOSIS" });
+    expect(first.players["player.bot-balanced"]?.diagnosisSubmissions).toEqual(
+      second.players["player.bot-balanced"]?.diagnosisSubmissions,
+    );
+  });
+
   it("lets the human decide before the bot without awarding first-player priority", () => {
     let state = createCardMatch(content, {
       seed: "human-first-diagnosis",

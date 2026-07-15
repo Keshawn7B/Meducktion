@@ -8,6 +8,7 @@ import type {
 } from "../card-content/types";
 import {
   createSeededRandomState,
+  nextSeededRandom,
   seededChoice,
   seededShuffle,
 } from "./random";
@@ -48,6 +49,10 @@ const DEFAULT_PLAYERS: MatchPlayerSetup[] = [
     botStyle: "balanced",
   },
 ];
+
+// The bot usually trusts its strongest evidence, but it is deliberately fallible.
+// Keeping this below 1 prevents an evidence leader from becoming a guaranteed win.
+const BOT_EVIDENCE_CONFIDENCE = 0.72;
 
 function cardById(
   content: CardCaseContent,
@@ -978,15 +983,29 @@ function botDiagnosisCandidate(
   if (leaders.length > 1 && state.currentRound < state.maximumRounds) {
     return null;
   }
-  const leader = chooseSeededFromBest(state, leaders);
-  if (leader === null) {
+  const evidenceLeader = chooseSeededFromBest(state, leaders);
+  if (evidenceLeader === null) {
     return null;
   }
-  const first = leader.clues[0];
-  const second = leader.clues[1];
+
+  const confidenceRoll = nextSeededRandom(state.rng);
+  state.rng = confidenceRoll.state;
+  let guess = evidenceLeader;
+  if (confidenceRoll.value >= BOT_EVIDENCE_CONFIDENCE) {
+    const alternatives = scored.filter(
+      (candidate) => candidate.conditionId !== evidenceLeader.conditionId,
+    );
+    const secondGuess = chooseSeededFromBest(state, alternatives);
+    if (secondGuess !== null) {
+      guess = secondGuess;
+    }
+  }
+
+  const first = evidenceLeader.clues[0];
+  const second = evidenceLeader.clues[1];
   return first === undefined || second === undefined
     ? null
-    : { conditionId: leader.conditionId, clueIds: [first, second] };
+    : { conditionId: guess.conditionId, clueIds: [first, second] };
 }
 
 function autoDiagnoseBots(
