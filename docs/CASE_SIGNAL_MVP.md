@@ -67,13 +67,13 @@ Main card and clue copy uses plain language. Optional `Learn more` content may e
 
 1. Home presents Meducktion, the current tagline, Play, How to Play, secondary Practice, artwork, and the disclaimer.
 2. Match setup collects a player name, shows one Balanced bot, selected case, and a short rules summary.
-3. Patient introduction presents Jordan, four possible conditions, four rounds, and `Deal Cards`.
+3. Patient introduction presents Jordan, four possible conditions, ten rounds, and `Deal Cards`.
 4. The engine creates a seeded match and deals each player a guaranteed usable three-card hand.
 5. The human may select, change, or deselect one card before pressing `Lock Card`; the bot chooses and locks deterministically.
 6. Locking does not resolve cards. Once all players lock, `Reveal` enters the authored reveal sequence.
 7. Public clues join the shared board; private clues appear only to their owner; the shared event resolves once at its authored round.
 8. Players review clues and, from Round 2 onward, may submit one condition plus two known clues or continue.
-9. Active players draw back to three and repeat through Round 4. Diagnosed players remain visible without playing new cards.
+9. Active players draw back to three and repeat through Round 10. Diagnosed players remain visible without playing new cards.
 10. The final window closes the match, calculates deterministic scores/rankings, reveals investigation paths, and explains the answer simply.
 11. `Play Again` creates a new local match. A compatible saved card match resumes exactly; invalid or legacy saves offer a safe restart.
 

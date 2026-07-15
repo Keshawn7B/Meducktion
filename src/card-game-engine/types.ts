@@ -181,7 +181,7 @@ export interface MatchState {
   rng: SeededRandomState;
   phase: MatchPhase;
   currentRound: number;
-  maximumRounds: 4;
+  maximumRounds: number;
   playerOrder: string[];
   players: Record<string, PlayerState>;
   publicClues: PublicClue[];

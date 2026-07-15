@@ -51,7 +51,7 @@ describe("competitive card content", () => {
     expect(thePainThatMovedCardCase.correctConditionId).toBe(
       "diagnosis.appendicitis",
     );
-    expect(thePainThatMovedCardCase.contentVersion).toContain("condition-descriptions");
+    expect(thePainThatMovedCardCase.contentVersion).toContain("ten-round-matches");
     expect(thePainThatMovedCardCase.status).toBe("medicallyApproved");
   });
 

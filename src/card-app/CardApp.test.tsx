@@ -40,7 +40,7 @@ function model(screen: CardAppModel["screen"], patch?: Partial<CardAppModel["mat
     conditions,
     match: {
       round: 2,
-      maximumRounds: 4,
+      maximumRounds: 10,
       phase: "card_selection",
       seedLabel: "friendly-owl",
       hand: [

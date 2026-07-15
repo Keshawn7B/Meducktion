@@ -296,7 +296,7 @@ export function createCardMatch(
     rng,
     phase: "match_intro",
     currentRound: 0,
-    maximumRounds: 4,
+    maximumRounds: 10,
     playerOrder: players.map((player) => player.id),
     players: playerStates,
     publicClues: [],

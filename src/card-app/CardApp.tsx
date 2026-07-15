@@ -341,7 +341,7 @@ function PatientIntro({
       />
       <section className="intro-stage">
         <div className="intro-portrait-wrap">
-          <p className="round-ribbon">Fictional case &middot; 4 rounds</p>
+          <p className="round-ribbon">Fictional case &middot; 10 rounds</p>
           <PatientPortrait large />
         </div>
         <div className="intro-story">

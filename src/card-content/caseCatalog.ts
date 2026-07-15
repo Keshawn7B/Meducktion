@@ -229,7 +229,7 @@ function createCase(spec: ScenarioSpec): CardCaseContent {
   }));
   return {
     schemaVersion: "card-case-v1",
-    contentVersion: "6.1.1-condition-descriptions.1",
+    contentVersion: "6.2.0-ten-round-matches.1",
     caseId,
     title: spec.title,
     status: "medicallyApproved",

@@ -62,11 +62,11 @@ Meet the patient
 → review four possible conditions
 → diagnose or continue
 → draw back to three cards
-→ repeat for up to four rounds
+→ repeat for up to ten rounds
 → compare scores
 ```
 
-MVP defaults are four rounds, a three-card starting hand, one card per player per round, one free redraw, diagnosis unlocked after Round 2, no more than two diagnosis attempts, and no strict timer. The local test setup is one human versus one deterministic Balanced bot; the state model supports 2–4 players.
+MVP defaults are ten rounds, a three-card starting hand, one card per player per round, one free redraw, diagnosis unlocked after Round 2, no more than two diagnosis attempts, and no strict timer. The local test setup is one human versus one deterministic Balanced bot; the state model supports 2–4 players.
 
 ## 7. Cards and information
 
@@ -103,7 +103,7 @@ match_intro
 
 A player may change a selection before locking. Selection and locking do not reveal or resolve a card. Once all active players lock, the reveal applies card effects, routes clues by visibility, and resolves the shared event at its authored round. Active players draw back to three. Diagnosed players remain visible as spectators while the match finishes.
 
-The match ends when every player has made a final diagnosis or after Round 4 and its final diagnosis window.
+The match ends when every player has made a final diagnosis or after Round 10 and its final diagnosis window.
 
 ## 10. Diagnosing and scoring
 

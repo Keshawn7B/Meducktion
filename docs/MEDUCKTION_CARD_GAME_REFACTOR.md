@@ -110,11 +110,11 @@ Meet the patient
 → receive and review clues
 → diagnose or continue
 → draw back to three cards
-→ repeat for up to four rounds
+→ repeat for up to ten rounds
 → first correct diagnosis wins
 ```
 
-Current defaults are 2–4 player-compatible rules, one human versus one Balanced bot for local testing, four rounds, a three-card hand, one card per player per round, diagnosis from Round 1, no strict timer, and no more than three diagnosis attempts. The target match length is 6–10 minutes.
+Current defaults are 2–4 player-compatible rules, one human versus one Balanced bot for local testing, ten rounds, a three-card hand, one card per player per round, diagnosis from Round 1, no strict timer, and no more than three diagnosis attempts.
 
 ## Card categories
 
@@ -216,7 +216,7 @@ The transport, lobby, and live-match slice is present under `src/firebase`, `src
 
 The host creates one deterministic all-human engine session from the room's pinned case, content version, seed, and member order. Every card selection, redraw, lock, reveal acknowledgement, diagnosis, and round transition travels through the existing command envelope and Firestore transaction boundary. The repository normalizes sequence and revision values against the latest snapshot, preventing concurrent clients from accidentally overwriting a newer transition while command IDs retain idempotency. React builds the table from the authenticated player's ID and never renders another player's hand, private clue text, or diagnosis choice.
 
-Round progression is multiplayer-aware. Every active player must lock before reveal, acknowledge the reveal before diagnosis opens, and either diagnose or explicitly keep investigating before the room advances. Round 4 still requires a diagnosis while an attempt remains. The room code is retained locally so a refresh can restore the subscription after Firebase restores the anonymous identity. If a lobby host leaves, ownership transfers deterministically to the next seated player. If someone explicitly leaves an active match, their engine seat becomes a Balanced bot and completes any pending lock, reveal acknowledgement, or diagnosis decision so the room cannot be stranded.
+Round progression is multiplayer-aware. Every active player must lock before reveal, acknowledge the reveal before diagnosis opens, and either diagnose or explicitly keep investigating before the room advances. Round 10 still requires a diagnosis while an attempt remains. The room code is retained locally so a refresh can restore the subscription after Firebase restores the anonymous identity. If a lobby host leaves, ownership transfers deterministically to the next seated player. If someone explicitly leaves an active match, their engine seat becomes a Balanced bot and completes any pending lock, reveal acknowledgement, or diagnosis decision so the room cannot be stranded.
 
 Firebase networking remains outside the engine. The engine knows nothing about Firebase, browser clocks, presence, authentication, transport retries, or server timestamps. The room adapter transmits validated commands and versioned snapshots and enforces expected revisions and command idempotency. It must not resolve cards, inspect private clues for unrelated players, choose bot actions, recalculate scores, or alter authored medical truth.
 
@@ -258,7 +258,7 @@ The first safe v2 rules slice addresses fairness and match completion without re
 
 - Cards resolve as a simultaneous round. Each player receives their own private copy of the authored YES/NO answer, even when opponents chose the same question.
 - Using the second diagnosis attempt no longer removes a player from card play. They continue investigating for discovery points.
-- An eligible player cannot skip the Round 4 final diagnosis. The interface directs them to make their call before completion.
+- An eligible player cannot skip the Round 10 final diagnosis. The interface directs them to make their call before completion.
 - First place is always unique. The engine records the actual ranking criterion, and the results screen explains it.
 
 Remaining v2 work is deliberately staged rather than folded into this narrow engine migration. A variable hidden diagnosis requires a fully authored and medically reviewed clue matrix for every possible outcome. Player-controlled keep/swap decisions, choice-driven event cards, weighted evidence, revised positive scoring, public Test cards, generic Tactics, bot strategy changes, and result-aware bad-luck protection remain unimplemented. Those changes affect content contracts, balance, tutorial copy, and saved-state compatibility and should be developed as a separately versioned slice with dedicated playtesting.

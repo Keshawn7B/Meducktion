@@ -485,16 +485,17 @@ describe("round state machine", () => {
     expect(eventReveals[0]?.round).toBe(authoredRound);
   });
 
-  it("advances through all four rounds into a final diagnosis window", () => {
-    let state = startAndDraw("four-rounds");
-    for (let round = 1; round <= 4; round += 1) {
+  it("advances through all ten rounds into a final diagnosis window", () => {
+    let state = startAndDraw("ten-rounds");
+    expect(state.maximumRounds).toBe(10);
+    for (let round = 1; round <= state.maximumRounds; round += 1) {
       expect(state.currentRound).toBe(round);
       state = resolveAndOpenDiagnosis(state);
       expect(state.phase).toBe("diagnosis_window");
       state = advanceAndDraw(state);
     }
     expect(state.phase).toBe("diagnosis_window");
-    expect(state.currentRound).toBe(4);
+    expect(state.currentRound).toBe(10);
   });
 
   it("replays the same command sequence to the same state", () => {
@@ -630,7 +631,8 @@ describe("diagnosis race", () => {
   });
 
   it("requires an available final diagnosis before the match can finish", () => {
-    const state = diagnosisState(4);
+    const state = diagnosisState();
+    state.currentRound = state.maximumRounds;
     const result = transitionCardGame(content, state, {
       type: "CONTINUE_FROM_DIAGNOSIS",
     });

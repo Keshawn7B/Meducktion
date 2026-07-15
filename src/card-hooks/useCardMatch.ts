@@ -324,7 +324,7 @@ export function buildCardAppModel(
     })),
     match: {
       round: state?.currentRound ?? 1,
-      maximumRounds: state?.maximumRounds ?? 4,
+      maximumRounds: state?.maximumRounds ?? 10,
       phase: viewPhase(state?.phase ?? "round_draw"),
       seedLabel: state?.seed ?? "not-started",
       hand:
