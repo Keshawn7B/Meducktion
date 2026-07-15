@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { cardCaseRegistry, getCardCaseById, thePainThatMovedCardCase } from "../card-content";
-import { createCardMatch, createSeededRandomState, seededChoice, type CardGameCommand } from "../card-game-engine";
+import { getCardCaseById, thePainThatMovedCardCase } from "../card-content";
+import { createCardMatch, type CardGameCommand } from "../card-game-engine";
 import { applyCardMatchCommand, createCardMatchSession } from "../card-match-session";
 import { buildCardAppModel, type CardMatchController } from "../card-hooks/useCardMatch";
 import type { CardAppActions, CardAppModel, DiagnosisInput } from "../card-app/types";
@@ -12,6 +12,7 @@ import {
   type MultiplayerRoomRepository,
 } from "../multiplayer-room";
 import type { MultiplayerLobbyActions, MultiplayerLobbyModel } from "./types";
+import { selectMultiplayerCase } from "./caseSelection";
 
 const ROOM_CODE_PATTERN = /^[A-HJ-NP-Z2-9]{6}$/;
 const ACTIVE_ROOM_STORAGE_KEY = "meducktion:multiplayer-room";
@@ -188,10 +189,8 @@ export function useMultiplayerLobby(onExit?: () => void): MultiplayerLobbyContro
     createRoom: async (displayName, maximumPlayers) => run("create", async () => {
       const user = await ensureAnonymousPlayer();
       const roomCode = generateRoomCode();
-      const selectedCase = seededChoice(
-        cardCaseRegistry,
-        createSeededRandomState(`room-case:${roomCode}`),
-      )?.value ?? thePainThatMovedCardCase;
+      const seed = `room-${roomCode}-${Date.now().toString(36)}-${generateRoomCode()}`;
+      const selectedCase = selectMultiplayerCase(seed);
       const created = await repository().createRoom({
         roomId: roomCode,
         hostUid: user.uid,
@@ -199,7 +198,7 @@ export function useMultiplayerLobby(onExit?: () => void): MultiplayerLobbyContro
         maximumPlayers,
         caseId: selectedCase.caseId,
         contentVersion: selectedCase.contentVersion,
-        seed: `room-${roomCode}-${Date.now().toString(36)}`,
+        seed,
         now: Date.now(),
       });
       uidRef.current = user.uid;
@@ -483,7 +482,13 @@ export function useMultiplayerLobby(onExit?: () => void): MultiplayerLobbyContro
           await continueWhenReady(chosen);
         }),
         playAgain: () => void performMatch(async () => {
-          const reset = await repository().resetRoom(room.roomId, uid);
+          const seed = `${room.seed}:rematch:${generateRoomCode()}`;
+          const selectedCase = selectMultiplayerCase(seed, room.caseId);
+          const reset = await repository().resetRoom(room.roomId, uid, {
+            caseId: selectedCase.caseId,
+            contentVersion: selectedCase.contentVersion,
+            seed,
+          });
           setRoom(reset);
           rememberRoomCode(reset.roomId);
         }),

@@ -1,6 +1,6 @@
 import { collection, deleteDoc, doc, getDocs, onSnapshot, runTransaction, serverTimestamp, setDoc, Timestamp, type Firestore } from "firebase/firestore";
 import { applyRoomCommand, createRoomRecord, joinRoomRecord, leaveRoomRecord, markRoomReadyToStart, resetCompletedRoom, setMemberReady, startRoomRecord } from "./protocol";
-import type { CreateMultiplayerRoomInput, MultiplayerRoom, MultiplayerRoomRepository } from "./types";
+import type { CreateMultiplayerRoomInput, MultiplayerMysterySelection, MultiplayerRoom, MultiplayerRoomRepository } from "./types";
 import type { CardMatchCommandEnvelope, CardMatchSession } from "../card-match-session";
 
 export class FirestoreMultiplayerRoomRepository implements MultiplayerRoomRepository {
@@ -48,7 +48,9 @@ export class FirestoreMultiplayerRoomRepository implements MultiplayerRoomReposi
       transaction.delete(reference);
     });
   }
-  resetRoom(roomId: string, uid: string) { return this.update(roomId, (room) => resetCompletedRoom(room, uid, this.now())); }
+  resetRoom(roomId: string, uid: string, mystery: MultiplayerMysterySelection) {
+    return this.update(roomId, (room) => resetCompletedRoom(room, uid, mystery, this.now()));
+  }
   async heartbeatPresence(roomId: string, uid: string): Promise<void> {
     await setDoc(this.presenceReference(roomId, uid), { uid, lastSeenAt: serverTimestamp() });
   }

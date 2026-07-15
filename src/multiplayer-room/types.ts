@@ -37,6 +37,12 @@ export interface CreateMultiplayerRoomInput {
   now: number;
 }
 
+export interface MultiplayerMysterySelection {
+  caseId: string;
+  contentVersion: string;
+  seed: string;
+}
+
 export interface MultiplayerRoomRepository {
   createRoom(input: CreateMultiplayerRoomInput): Promise<MultiplayerRoom>;
   joinRoom(roomId: string, uid: string, displayName: string): Promise<MultiplayerRoom>;
@@ -44,7 +50,7 @@ export interface MultiplayerRoomRepository {
   markReadyToStart(roomId: string, uid: string): Promise<MultiplayerRoom>;
   leaveRoom(roomId: string, uid: string): Promise<void>;
   closeRoom(roomId: string, uid: string): Promise<void>;
-  resetRoom(roomId: string, uid: string): Promise<MultiplayerRoom>;
+  resetRoom(roomId: string, uid: string, mystery: MultiplayerMysterySelection): Promise<MultiplayerRoom>;
   heartbeatPresence(roomId: string, uid: string): Promise<void>;
   removePresence(roomId: string, uid: string): Promise<void>;
   subscribePresence(roomId: string, listener: (presence: Readonly<Record<string, number>>) => void): () => void;

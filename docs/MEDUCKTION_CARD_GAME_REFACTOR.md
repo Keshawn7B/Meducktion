@@ -6,7 +6,7 @@ Meducktion now uses a direct deduction race instead of point scoring. A player m
 
 The authored draft catalog contains 25 fictional scenarios. Every scenario presents eight plausible, deliberately overlapping possibilities and uses the same 24 generic symptom and homeostasis questions. Up to four core conditions are authored per scenario; any condition with an identical 24-answer profile is excluded from that match, then the closest distinct reviewed profiles fill the eight-option differential. The eight choices are shuffled from the match seed, so the answer position varies between matches while remaining identical for every player and stable after refresh. Every question produces a private YES or NO answer. Each player deck contains exactly one copy of each question, so a player cannot draw a duplicate card during a match. The consistent vocabulary is intentional: players learn the deck while different combinations of answers create the deduction challenge. Three blind guesses can cover at most 37.5% of the diagnosis pool, with escalating evidence loss after each miss.
 
-Players do not choose from or preview named scenarios. Local matches draw a case from the 25-case catalog using the match seed, and online rooms derive the same hidden draw from the room code so every client receives the identical case. The patient and mystery are revealed only after the match starts; authored case titles remain internal content metadata.
+Players do not choose from or preview named scenarios. Local matches draw a case from the 25-case catalog using the match seed. A new online room randomly selects and stores one case and seed so every client receives the identical mystery. A rematch randomly selects a different case from the one just completed, then pins that new case for all room members. The patient and mystery are revealed only after the match starts; authored case titles remain internal content metadata.
 
 The expanded profiles are marked `medicallyApproved` following the July 2026 review. Difficulty, ambiguity, answer balance, and bot behavior still require structured playtesting.
 
@@ -35,7 +35,7 @@ Twenty-five fictional deduction cases are currently registered. They share a 24-
 - Card copy stays inside the portrait face because only the short question and YES/NO outcome preview are shown.
 - Selecting a card visually mutes the other two without disabling them, so the player can still change their choice before locking.
 - Opponent answers remain hidden; only the played question type and the fact that an answer was received are shown.
-- Local setup exposes the full case registry. An online room pins one registered case deterministically when created.
+- Local setup exposes the full case registry. An online room randomly selects one registered case when created and pins it for the active match; rematches exclude the immediately previous case.
 - Online `Play Again` resets the completed match to the same lobby instead of deleting the room or returning home.
 
 ### Remaining playtest observations
@@ -228,7 +228,7 @@ The room rules were compiled and deployed to Firebase project `meducktion` on Ju
 
 ### Final multiplayer polish
 
-The active table now keeps the private room code and a Live, Syncing, or Offline indicator visible without reopening the lobby. Interactive card, redraw, lock, reveal, diagnosis, continue, and rematch controls pause while a Firestore command is in flight or the browser reports that it is offline, which prevents accidental duplicate commands and gives the player a clear recovery signal. Leaving an active match requires confirmation and retains the existing deterministic bot takeover. When a completed room's host chooses Play Again, the finished Firestore room is deleted before returning home; non-host players simply leave the completed view.
+The active table now keeps the private room code and a Live, Syncing, or Offline indicator visible without reopening the lobby. Interactive card, redraw, lock, reveal, diagnosis, continue, and rematch controls pause while a Firestore command is in flight or the browser reports that it is offline, which prevents accidental duplicate commands and gives the player a clear recovery signal. Leaving an active match requires confirmation and retains the existing deterministic bot takeover. When a room member chooses Play Again after completion, a transaction returns the existing room to its lobby, clears the finished session, and pins a newly randomized case that cannot repeat the immediately previous mystery.
 
 Active matches now maintain presence in a dedicated Firestore subcollection so heartbeats never change the deterministic room session or command revision. Each player refreshes their server-timestamped presence every 15 seconds and when returning to a visible tab. Opponents first show Reconnecting; after a 90-second grace period, a remaining member transactionally converts the stale human seat to the existing Balanced bot and continues any pending reveal or diagnosis transition. A player who returns after takeover receives a clear explanation instead of being allowed to control the bot seat. Offline play cannot progress until connectivity returns.
 

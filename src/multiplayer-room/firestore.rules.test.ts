@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { assertFails, assertSucceeds, initializeTestEnvironment, type RulesTestEnvironment } from "@firebase/rules-unit-testing";
 import { deleteDoc, doc, getDoc, serverTimestamp, setDoc, Timestamp, type Firestore } from "firebase/firestore";
-import { thePainThatMovedCardCase } from "../card-content";
+import { cardCaseRegistry, thePainThatMovedCardCase } from "../card-content";
 import { createCardMatch } from "../card-game-engine";
 import { createCardMatchSession } from "../card-match-session";
 import { applyRoomCommand, createRoomRecord, joinRoomRecord, leaveRoomRecord, markRoomReadyToStart, resetCompletedRoom, setMemberReady, startRoomRecord } from "./protocol";
@@ -10,6 +10,7 @@ import { FirestoreMultiplayerRoomRepository } from "./firestoreRepository";
 
 let environment: RulesTestEnvironment;
 const room = createRoomRecord({ roomId: "RULES1", hostUid: "host", hostDisplayName: "Host", maximumPlayers: 4, caseId: "case.the-pain-that-moved", contentVersion: "1.0.0", seed: "rules", now: 1_000 });
+const rematchCase = cardCaseRegistry.find((cardCase) => cardCase.caseId !== thePainThatMovedCardCase.caseId)!;
 
 beforeAll(async () => {
   environment = await initializeTestEnvironment({ projectId: "demo-meducktion", firestore: { rules: readFileSync("firestore.rules", "utf8") } });
@@ -131,7 +132,7 @@ describe("Firestore multiplayer room rules", () => {
     await assertFails(setDoc(doc(environment.authenticatedContext("outsider").firestore(), "rooms", room.roomId), advanced));
   });
 
-  it("allows members to return a completed match to its unchanged lobby", async () => {
+  it("allows members to return a completed match to its lobby with a new mystery", async () => {
     const joined = setMemberReady(joinRoomRecord(room, "guest", "Guest", 2_000), "guest", true);
     const complete = {
       ...joined,
@@ -139,7 +140,11 @@ describe("Firestore multiplayer room rules", () => {
       session: createCardMatchSession(createCardMatch(thePainThatMovedCardCase, { seed: joined.seed }), room.roomId),
     };
     await environment.withSecurityRulesDisabled(async (context) => setDoc(doc(context.firestore(), "rooms", room.roomId), complete));
-    const reset = resetCompletedRoom(complete, "guest", 5_000);
+    const reset = resetCompletedRoom(complete, "guest", {
+      caseId: rematchCase.caseId,
+      contentVersion: rematchCase.contentVersion,
+      seed: "rules-rematch",
+    }, 5_000);
     await assertSucceeds(setDoc(doc(environment.authenticatedContext("guest").firestore(), "rooms", room.roomId), reset));
     await assertFails(setDoc(doc(environment.authenticatedContext("outsider").firestore(), "rooms", room.roomId), reset));
     await assertFails(setDoc(doc(environment.authenticatedContext("guest").firestore(), "rooms", room.roomId), {

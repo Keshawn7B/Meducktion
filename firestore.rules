@@ -7,10 +7,7 @@ service cloud.firestore {
     function immutableRoomFields() {
       return request.resource.data.schemaVersion == resource.data.schemaVersion
         && request.resource.data.roomId == resource.data.roomId
-        && request.resource.data.caseId == resource.data.caseId
-        && request.resource.data.contentVersion == resource.data.contentVersion
         && request.resource.data.maximumPlayers == resource.data.maximumPlayers
-        && request.resource.data.seed == resource.data.seed
         && request.resource.data.createdAt == resource.data.createdAt;
     }
     function isJoiningLobby() {
@@ -101,7 +98,12 @@ service cloud.firestore {
         && request.resource.data.memberUids == resource.data.memberUids
         && request.resource.data.members == resource.data.members
         && request.resource.data.hostUid == resource.data.hostUid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'session', 'revision', 'expiresAt'])
+        && request.resource.data.caseId is string
+        && request.resource.data.caseId != resource.data.caseId
+        && request.resource.data.contentVersion is string
+        && request.resource.data.seed is string
+        && request.resource.data.seed != resource.data.seed
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'caseId', 'contentVersion', 'seed', 'session', 'revision', 'expiresAt'])
         && request.resource.data.revision == resource.data.revision + 1
         && request.resource.data.expiresAt >= resource.data.expiresAt;
     }

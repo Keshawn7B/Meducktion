@@ -1,5 +1,5 @@
 import { applyCardMatchCommand, type CardMatchCommandEnvelope, type CardMatchSession } from "../card-match-session";
-import type { CreateMultiplayerRoomInput, MultiplayerRoom } from "./types";
+import type { CreateMultiplayerRoomInput, MultiplayerMysterySelection, MultiplayerRoom } from "./types";
 
 export class MultiplayerRoomError extends Error {
   constructor(public readonly code: "ROOM_FULL" | "ROOM_ACTIVE" | "NOT_MEMBER" | "NOT_HOST" | "NOT_READY" | "SESSION_ERROR", message: string) {
@@ -69,12 +69,20 @@ export function startRoomRecord(room: MultiplayerRoom, uid: string, session: Car
   return { ...room, status: "active", session, revision: room.revision + 1, expiresAt: Math.max(room.expiresAt, now + ACTIVE_EXTENSION) };
 }
 
-export function resetCompletedRoom(room: MultiplayerRoom, uid: string, now: number): MultiplayerRoom {
+export function resetCompletedRoom(
+  room: MultiplayerRoom,
+  uid: string,
+  mystery: MultiplayerMysterySelection,
+  now: number,
+): MultiplayerRoom {
   if (!room.memberUids.includes(uid)) throw new MultiplayerRoomError("NOT_MEMBER", "You are not a member of this room.");
   if (room.status !== "complete") throw new MultiplayerRoomError("ROOM_ACTIVE", "The current match is not complete.");
   return {
     ...room,
     status: "lobby",
+    caseId: mystery.caseId,
+    contentVersion: mystery.contentVersion,
+    seed: mystery.seed,
     session: null,
     revision: room.revision + 1,
     expiresAt: Math.max(room.expiresAt, now + DAY),
