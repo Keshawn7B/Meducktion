@@ -77,6 +77,35 @@ interface ScenarioSpec {
   conditions: readonly [string, string, string, string];
 }
 
+const DIAGNOSIS_OPTION_COUNT = 8;
+
+function symptomProfileSimilarity(leftName: string, rightName: string): number {
+  const left = new Set(profiles[leftName] ?? []);
+  const right = new Set(profiles[rightName] ?? []);
+  return questions.reduce(
+    (score, question) =>
+      score + (left.has(question.key) === right.has(question.key) ? 1 : 0),
+    0,
+  );
+}
+
+function expandDiagnosisOptions(
+  authoredConditions: ScenarioSpec["conditions"],
+): string[] {
+  const existing = new Set(authoredConditions);
+  const correctCondition = authoredConditions[0];
+  const added = Object.keys(profiles)
+    .filter((condition) => !existing.has(condition))
+    .sort((left, right) => {
+      const similarityDifference =
+        symptomProfileSimilarity(correctCondition, right) -
+        symptomProfileSimilarity(correctCondition, left);
+      return similarityDifference || left.localeCompare(right);
+    })
+    .slice(0, DIAGNOSIS_OPTION_COUNT - authoredConditions.length);
+  return [...authoredConditions, ...added];
+}
+
 const scenarios: readonly ScenarioSpec[] = [
   { slug: "the-pain-that-moved", title: "The Pain That Moved", patient: "Jordan Lee", age: 19, introduction: "Jordan's stomach pain moved and has become harder to ignore.", conditions: ["Appendicitis", "Stomach infection", "Urinary infection", "Kidney stone"] },
   { slug: "breathless-afternoon", title: "A Breathless Afternoon", patient: "Sam Rivera", age: 16, introduction: "Sam became short of breath during soccer practice.", conditions: ["Asthma flare", "Pneumonia", "Panic episode", "Allergic reaction"] },
@@ -111,10 +140,19 @@ function createCase(spec: ScenarioSpec): CardCaseContent {
   const caseId = `case.${spec.slug}`;
   const isOriginalCase = spec.slug === "the-pain-that-moved";
   const variantId = isOriginalCase ? "variant.classic" : `variant.${spec.slug}.classic`;
-  const conditionIds = isOriginalCase
-    ? ["diagnosis.appendicitis", "diagnosis.gastroenteritis", "diagnosis.urinary-tract-infection", "diagnosis.kidney-stone"]
-    : spec.conditions.map((_, index) => `diagnosis.${spec.slug}.${index + 1}`);
-  const conditionAnswers = spec.conditions.map((name) => new Set(profiles[name] ?? []));
+  const conditionNames = expandDiagnosisOptions(spec.conditions);
+  const originalConditionIds = [
+    "diagnosis.appendicitis",
+    "diagnosis.gastroenteritis",
+    "diagnosis.urinary-tract-infection",
+    "diagnosis.kidney-stone",
+  ];
+  const conditionIds = conditionNames.map((_, index) =>
+    isOriginalCase && originalConditionIds[index] !== undefined
+      ? originalConditionIds[index]!
+      : `diagnosis.${spec.slug}.${index + 1}`,
+  );
+  const conditionAnswers = conditionNames.map((name) => new Set(profiles[name] ?? []));
   const clues = questions.map((question) => {
     const answer = conditionAnswers[0]!.has(question.key);
     const matching = conditionAnswers.flatMap((profile, index) => profile.has(question.key) === answer ? [conditionIds[index]!] : []);
@@ -147,14 +185,14 @@ function createCase(spec: ScenarioSpec): CardCaseContent {
   }));
   return {
     schemaVersion: "card-case-v1",
-    contentVersion: "5.0.0-race-deduction-draft.1",
+    contentVersion: "6.0.0-expanded-diagnosis-draft.1",
     caseId,
     title: spec.title,
     status: "medicalReviewRequired",
     patient: { id: isOriginalCase ? "patient.jordan-lee" : `patient.${spec.slug}`, displayName: spec.patient, age: spec.age, pronouns: "they/them", portraitKey: "patient.generic", introduction: spec.introduction },
     disclaimer,
     correctConditionId: conditionIds[0]!,
-    conditions: spec.conditions.map((displayName, index) => ({ id: conditionIds[index]!, displayName, learnMore: `One possible answer in this fictional mystery.`, iconKey: `condition-${index + 1}` })),
+    conditions: conditionNames.map((displayName, index) => ({ id: conditionIds[index]!, displayName, learnMore: `One possible answer in this fictional mystery.`, iconKey: `condition-${index + 1}` })),
     clues,
     cards,
     variants: [{ id: variantId, displayName: "Classic deduction", startingClueId: clues[0]!.id, initiallyStrongAlternativeId: conditionIds[1]!, especiallyValuableCardIds: cards.filter((_, index) => clues[index]!.meaningful).slice(0, 4).map((card) => card.id) }],

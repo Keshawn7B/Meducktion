@@ -2,7 +2,7 @@
 
 **Reveal. Deduce. Diagnose.**
 
-Meducktion is a beginner-friendly competitive medical deduction card game. Players investigate one of four fictional cases, choose one short Ask, Check, or Test question each round, privately sort its authored answer into a YES or NO pile, and try to make the strongest correct diagnosis. Local play supports deterministic bots; private Firebase rooms support two to four human players.
+Meducktion is a beginner-friendly competitive medical deduction card game. Players investigate one of 25 fictional cases, choose one short Ask, Check, or Test question each round, privately sort its authored answer into a YES or NO pile, and narrow eight plausible conditions before diagnosing. Local play supports deterministic bots; private Firebase rooms support two to four human players.
 
 > **Medical disclaimer:** Meducktion is a fictional educational game. It is not medical advice, clinical training, or a diagnostic tool. Do not use it to make decisions about real patients.
 
@@ -62,4 +62,4 @@ The stable `CASE_SIGNAL_*` filenames are intentionally retained to avoid breakin
 
 ## Release status
 
-All four cases remain pending professional medical review and balance playtesting. Meducktion is an official working title, not a cleared public name; trademark, domain, social-handle, app-store, and other platform availability must be reviewed before release.
+All 25 cases remain pending professional medical review and balance playtesting. Meducktion is an official working title, not a cleared public name; trademark, domain, social-handle, app-store, and other platform availability must be reviewed before release.

@@ -8,24 +8,25 @@ import {
 import { createCardMatch, getCompatibleCards } from "../card-game-engine";
 
 describe("competitive card content", () => {
-  it("registers the converted Jordan Lee case with four beginner choices", () => {
+  it("preserves the four authored Jordan Lee choices and adds plausible distractors", () => {
     expect(cardCaseRegistry).toContain(thePainThatMovedCardCase);
     expect(thePainThatMovedCardCase.patient.displayName).toBe("Jordan Lee");
     expect(
       thePainThatMovedCardCase.conditions.map((condition) => condition.displayName),
-    ).toEqual([
+    ).toEqual(expect.arrayContaining([
       "Appendicitis",
       "Stomach infection",
       "Urinary infection",
       "Kidney stone",
-    ]);
+    ]));
+    expect(thePainThatMovedCardCase.conditions).toHaveLength(8);
   });
 
   it("offers 25 cases built around the same large private YES and NO deck", () => {
     expect(cardCaseRegistry).toHaveLength(25);
     const expectedQuestions = thePainThatMovedCardCase.cards.map((card) => card.displayName);
     for (const cardCase of cardCaseRegistry) {
-      expect(cardCase.conditions).toHaveLength(4);
+      expect(cardCase.conditions).toHaveLength(8);
       expect(cardCase.cards).toHaveLength(24);
       expect(cardCase.cards.map((card) => card.displayName)).toEqual(expectedQuestions);
       expect(new Set(cardCase.clues.map((clue) => clue.answer))).toEqual(
@@ -48,7 +49,7 @@ describe("competitive card content", () => {
     expect(thePainThatMovedCardCase.correctConditionId).toBe(
       "diagnosis.appendicitis",
     );
-    expect(thePainThatMovedCardCase.contentVersion).toContain("race-deduction");
+    expect(thePainThatMovedCardCase.contentVersion).toContain("expanded-diagnosis");
   });
 
   it("uses only Ask, Check, and Test question categories", () => {
@@ -79,7 +80,7 @@ describe("competitive card content", () => {
           .map((clue) => clue.supportsConditionIds.includes(condition.id) ? "1" : "0")
           .join(""),
       );
-      expect(new Set(profiles).size).toBe(4);
+      expect(new Set(profiles).size).toBe(8);
     }
   });
 

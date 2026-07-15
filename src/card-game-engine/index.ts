@@ -81,8 +81,8 @@ export function getCompatibleCards(
 }
 
 function assertContent(content: CardCaseContent): void {
-  if (content.conditions.length !== 4) {
-    throw new Error("A card match requires exactly four conditions.");
+  if (content.conditions.length !== 8) {
+    throw new Error("A card match requires exactly eight conditions.");
   }
   if (
     !content.conditions.some(
@@ -897,7 +897,7 @@ function validateDiagnosis(
   if (!content.conditions.some((condition) => condition.id === conditionId)) {
     return {
       code: "UNKNOWN_CONDITION",
-      message: "Choose one of the four conditions in this match.",
+      message: "Choose one of the eight conditions in this match.",
       relatedId: conditionId,
     };
   }

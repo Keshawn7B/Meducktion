@@ -45,8 +45,8 @@ const tutorialPanels = [
   {
     eyebrow: "One shared case",
     title: "Review the same fictional case",
-    body: "You and your opponents meet one patient and consider the same four possible conditions.",
-    symbol: "4",
+    body: "You and your opponents meet one patient and consider the same eight possible conditions.",
+    symbol: "8",
   },
   {
     eyebrow: "Choose carefully",
@@ -316,7 +316,7 @@ function SetupScreen({
           </div>
           <ol className="micro-rules" aria-label="Short rules summary">
             <li>Choose one card each round.</li>
-            <li>Use clues to narrow four conditions.</li>
+            <li>Use clues to narrow eight conditions.</li>
             <li>Diagnose whenever you are ready.</li>
             <li>The first correct diagnosis wins.</li>
           </ol>
@@ -933,7 +933,10 @@ function PatientPortrait({ large = false }: { large?: boolean }) {
 
 function ConditionGrid({ conditions, compact = false }: { conditions: CardAppModel["conditions"]; compact?: boolean }) {
   return (
-    <div className={`condition-grid${compact ? " condition-grid-compact" : ""}`}>
+    <div
+      className={`condition-grid${compact ? " condition-grid-compact" : ""}`}
+      aria-label={`${conditions.length} possible conditions`}
+    >
       {conditions.map((condition, index) => (
         <article className="condition-tile" key={condition.id}>
           <span className="condition-number" aria-hidden="true">{index + 1}</span>

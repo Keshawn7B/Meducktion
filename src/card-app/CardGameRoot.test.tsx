@@ -33,6 +33,7 @@ describe("player-facing card table", () => {
     expect(document.querySelector('img[src$="/assets/patient-mystery-placeholder.webp"]')).toBeInTheDocument();
     expect(document.querySelector('img[src$="/assets/patient-jordan-lee.webp"]')).not.toBeInTheDocument();
     expect(document.querySelector('img[src$="/assets/opponent-dr-beak.webp"]')).toBeInTheDocument();
+    expect(screen.getByLabelText("8 possible conditions").children).toHaveLength(8);
     expect(screen.getAllByRole("button", { name: /question:/i })).toHaveLength(3);
     expect(screen.getByRole("heading", { name: "Your YES / NO evidence" })).toBeInTheDocument();
     expect(screen.getByLabelText("Three face-down opponent cards").children).toHaveLength(3);

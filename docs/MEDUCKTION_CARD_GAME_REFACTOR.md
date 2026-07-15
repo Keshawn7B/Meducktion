@@ -4,7 +4,7 @@
 
 Meducktion now uses a direct deduction race instead of point scoring. A player may diagnose during any card-selection or diagnosis window, including Round 1. The first correct diagnosis ends the match immediately and is the sole winner. Submission order matters only when a correct command is accepted; there is no score calculation or first-place tie. A wrong diagnosis removes that player's newest private answer, consumes one of two attempts, and blocks another guess until the next round.
 
-The authored draft catalog contains 25 fictional scenarios. Every scenario presents four plausible, deliberately overlapping possibilities and uses the same 24 generic symptom and homeostasis questions. Every question produces a private YES or NO answer. Each player deck contains exactly one copy of each question, so a player cannot draw a duplicate card during a match. The consistent vocabulary is intentional: players learn the deck while different combinations of answers create the deduction challenge.
+The authored draft catalog contains 25 fictional scenarios. Every scenario presents eight plausible, deliberately overlapping possibilities and uses the same 24 generic symptom and homeostasis questions. Four core conditions are authored per scenario; four additional distractors are selected deterministically from the most similar symptom profiles. Every question produces a private YES or NO answer. Each player deck contains exactly one copy of each question, so a player cannot draw a duplicate card during a match. The consistent vocabulary is intentional: players learn the deck while different combinations of answers create the deduction challenge. With two attempts among eight choices, blind guessing can cover only 25% of the diagnosis pool.
 
 Players do not choose from or preview named scenarios. Local matches draw a case from the 25-case catalog using the match seed, and online rooms derive the same hidden draw from the room code so every client receives the identical case. The patient and mystery are revealed only after the match starts; authored case titles remain internal content metadata.
 
@@ -26,7 +26,7 @@ Locking remains reversible while another player is still choosing. When the fina
 
 Question cards use short, generic symptom and homeostasis checks such as `Fever?`, `Nausea?`, `Urine clear?`, `Blood sugar normal?`, and `Cough?`. Their case-specific YES or NO answer is fixed case content, never random medical truth. Ask, Check, and Test are presentation types only; the active decks contain no Special cards and no cards that directly reveal the diagnosis.
 
-Twenty-five fictional deduction cases are currently registered. They share a 24-question vocabulary but use different overlapping answer profiles and four-condition sets. All case content remains blocked on professional medical review and balance playtesting before public release.
+Twenty-five fictional deduction cases are currently registered. They share a 24-question vocabulary but use different overlapping answer profiles and eight-condition sets. All case content remains blocked on professional medical review and balance playtesting before public release.
 
 ### Card and table polish
 
@@ -96,7 +96,7 @@ It should not feel like a medical-school examination, hospital simulator, electr
 1. Every player investigates the same fictional patient and receives three cards.
 2. Choose one Ask, Check, or Test question, then lock it.
 3. After everyone locks, reveal the cards and privately sort each answer into YES or NO.
-4. Diagnose whenever you are ready by choosing one of four conditions.
+4. Diagnose whenever you are ready by choosing one of eight conditions.
 5. A wrong diagnosis removes your newest answer and uses one of two attempts.
 6. The first correct diagnosis wins immediately.
 
@@ -132,7 +132,7 @@ Every opening hand contains at least one Ask, one Check, and one Test card. Each
 
 ## Public and private information
 
-Everyone sees the patient introduction, four possible conditions, round, table event, opponents' played card categories, and whether an opponent diagnosed. A player alone sees their hand, private YES/NO piles, diagnosis choices, submission, and unused redraw. The active cases produce no shared clues. Opponent answers and investigation paths remain hidden until the recap.
+Everyone sees the patient introduction, eight possible conditions, round, table event, opponents' played card categories, and whether an opponent diagnosed. A player alone sees their hand, private YES/NO piles, diagnosis choices, submission, and unused redraw. The active cases produce no shared clues. Opponent answers and investigation paths remain hidden until the recap.
 
 Cards may explicitly share a clue. The MVP does not allow unrestricted player-written clues, free-form medical reasoning, or bluffing about authored clue text.
 
@@ -170,7 +170,7 @@ The match ends immediately when the first correct diagnosis command is accepted.
 
 ## Diagnosis and victory
 
-A diagnosis submission contains one of the four match conditions. It is available whenever the player is choosing a card or the diagnosis window is open. The first correct submission ends the match and names exactly one winner. A wrong attempt removes the player's newest private answer, blocks another attempt until the next round, and the second wrong attempt exhausts diagnosis attempts. There are no points or score-based tie breakers.
+A diagnosis submission contains one of the eight match conditions. It is available whenever the player is choosing a card or the diagnosis window is open. The first correct submission ends the match and names exactly one winner. A wrong attempt removes the player's newest private answer, blocks another attempt until the next round, and the second wrong attempt exhausts diagnosis attempts. There are no points or score-based tie breakers.
 
 ## Local bot behavior
 
