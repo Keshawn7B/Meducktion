@@ -70,7 +70,7 @@ export interface CardPlay {
 
 export interface DiagnosisSubmission {
   conditionId: string;
-  clueIds: [string, string];
+  clueIds: string[];
   round: number;
   correct: boolean;
 }
@@ -145,6 +145,7 @@ export interface MatchEvent {
     | "card_deselected"
     | "hand_redrawn"
     | "card_locked"
+    | "card_unlocked"
     | "all_cards_locked"
     | "card_revealed"
     | "private_clue_revealed"
@@ -203,6 +204,7 @@ export type CardGameCommand =
   | { type: "DESELECT_CARD"; playerId: string }
   | { type: "USE_REDRAW"; playerId: string }
   | { type: "LOCK_CARD"; playerId: string }
+  | { type: "UNLOCK_CARD"; playerId: string }
   | { type: "RESOLVE_ROUND" }
   | { type: "ACKNOWLEDGE_REVEAL"; playerId: string }
   | { type: "OPEN_DIAGNOSIS_WINDOW" }
@@ -210,7 +212,7 @@ export type CardGameCommand =
       type: "SUBMIT_DIAGNOSIS";
       playerId: string;
       conditionId: string;
-      clueIds: [string, string];
+      clueIds: readonly string[];
     }
   | { type: "PASS_DIAGNOSIS"; playerId: string }
   | { type: "CONVERT_TO_BOT"; playerId: string }

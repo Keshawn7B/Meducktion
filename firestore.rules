@@ -93,6 +93,18 @@ service cloud.firestore {
         && request.resource.data.revision <= resource.data.revision + 1
         && request.resource.data.expiresAt >= resource.data.expiresAt;
     }
+    function isMemberResettingCompletedRoom() {
+      return isMember(resource.data)
+        && resource.data.status == 'complete'
+        && request.resource.data.status == 'lobby'
+        && request.resource.data.session == null
+        && request.resource.data.memberUids == resource.data.memberUids
+        && request.resource.data.members == resource.data.members
+        && request.resource.data.hostUid == resource.data.hostUid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'session', 'revision', 'expiresAt'])
+        && request.resource.data.revision == resource.data.revision + 1
+        && request.resource.data.expiresAt >= resource.data.expiresAt;
+    }
 
     match /rooms/{roomId} {
       allow create: if signedIn()
@@ -105,7 +117,7 @@ service cloud.firestore {
       allow list: if false;
       allow update: if immutableRoomFields()
         && request.resource.data.memberUids.size() <= resource.data.maximumPlayers
-        && (isJoiningLobby() || isLeavingLobby() || isUpdatingOwnReadyState() || isHostTransferringLobby() || isHostLockingReadyLobby() || isHostStartingMatch() || isMemberAdvancingMatch());
+        && (isJoiningLobby() || isLeavingLobby() || isUpdatingOwnReadyState() || isHostTransferringLobby() || isHostLockingReadyLobby() || isHostStartingMatch() || isMemberAdvancingMatch() || isMemberResettingCompletedRoom());
       allow delete: if signedIn() && request.auth.uid == resource.data.hostUid;
 
       match /presence/{presenceUid} {

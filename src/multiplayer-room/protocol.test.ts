@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { thePainThatMovedCardCase } from "../card-content";
 import { createCardMatch } from "../card-game-engine";
 import { createCardMatchSession } from "../card-match-session";
-import { applyRoomCommand, createRoomRecord, generateRoomCode, joinRoomRecord, leaveRoomRecord, markRoomReadyToStart, setMemberReady, startRoomRecord } from ".";
+import { applyRoomCommand, createRoomRecord, generateRoomCode, joinRoomRecord, leaveRoomRecord, markRoomReadyToStart, resetCompletedRoom, setMemberReady, startRoomRecord } from ".";
 
 const created = () => createRoomRecord({ roomId: "abc123", hostUid: "host", hostDisplayName: "Host", maximumPlayers: 4, caseId: thePainThatMovedCardCase.caseId, contentVersion: thePainThatMovedCardCase.contentVersion, seed: "room-seed", now: 1_000 });
 
@@ -139,6 +139,20 @@ describe("multiplayer room protocol", () => {
       expectedRevision: 1,
       command: { type: "PASS_DIAGNOSIS", playerId: "guest" },
     }, 4_100)).toThrow(/controlled by a bot/);
+  });
+
+  it("returns a completed match to the same lobby without changing its members", () => {
+    const joined = setMemberReady(joinRoomRecord(created(), "guest", "Guest", 2_000), "guest", true);
+    const completed = { ...joined, status: "complete" as const, session: createCardMatchSession(
+      createCardMatch(thePainThatMovedCardCase, { seed: joined.seed }),
+      joined.roomId,
+    ) };
+    const reset = resetCompletedRoom(completed, "guest", 5_000);
+    expect(reset.status).toBe("lobby");
+    expect(reset.session).toBeNull();
+    expect(reset.roomId).toBe(completed.roomId);
+    expect(reset.members).toEqual(completed.members);
+    expect(() => resetCompletedRoom(completed, "outsider", 5_000)).toThrow(/not a member/i);
   });
 
   it("generates readable six-character room codes", () => {

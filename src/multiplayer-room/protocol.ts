@@ -69,6 +69,18 @@ export function startRoomRecord(room: MultiplayerRoom, uid: string, session: Car
   return { ...room, status: "active", session, revision: room.revision + 1, expiresAt: Math.max(room.expiresAt, now + ACTIVE_EXTENSION) };
 }
 
+export function resetCompletedRoom(room: MultiplayerRoom, uid: string, now: number): MultiplayerRoom {
+  if (!room.memberUids.includes(uid)) throw new MultiplayerRoomError("NOT_MEMBER", "You are not a member of this room.");
+  if (room.status !== "complete") throw new MultiplayerRoomError("ROOM_ACTIVE", "The current match is not complete.");
+  return {
+    ...room,
+    status: "lobby",
+    session: null,
+    revision: room.revision + 1,
+    expiresAt: Math.max(room.expiresAt, now + DAY),
+  };
+}
+
 export function applyRoomCommand(room: MultiplayerRoom, uid: string, envelope: CardMatchCommandEnvelope, now: number): MultiplayerRoom {
   if (!room.memberUids.includes(uid)) throw new MultiplayerRoomError("NOT_MEMBER", "You are not a member of this room.");
   if (room.status !== "active" || !room.session) throw new MultiplayerRoomError("SESSION_ERROR", "This room has no active match.");

@@ -32,18 +32,24 @@ describe("player-facing card table", () => {
     expect(screen.getByLabelText("Meducktion card table")).toBeInTheDocument();
     expect(document.querySelector('img[src$="/assets/patient-jordan-lee.webp"]')).toBeInTheDocument();
     expect(document.querySelector('img[src$="/assets/opponent-dr-beak.webp"]')).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: /card:/i })).toHaveLength(3);
+    expect(screen.getAllByRole("button", { name: /question:/i })).toHaveLength(3);
+    expect(screen.getByRole("heading", { name: "Your YES / NO evidence" })).toBeInTheDocument();
     expect(screen.getByLabelText("Three face-down opponent cards").children).toHaveLength(3);
     expect(localStorage.getItem(CARD_MATCH_STORAGE_KEY)).toContain('"phase":"card_selection"');
   });
 
-  it("keeps selection, locking, and reveal as separate controller commands", async () => {
+  it("allows unlocking before the bot locks and otherwise reveals automatically", async () => {
     const user = await openMatch();
-    const card = screen.getAllByRole("button", { name: /card:/i })[0]!;
+    const card = screen.getAllByRole("button", { name: /question:/i })[0]!;
     await user.click(card);
     expect(card).toHaveAttribute("aria-pressed", "true");
     await user.click(screen.getByRole("button", { name: "Lock Card" }));
-    expect(screen.getAllByRole("button", { name: /card:/i })).toHaveLength(3);
-    expect(screen.getByRole("button", { name: "Reveal Cards" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /question:/i })).toHaveLength(3);
+    const unlock = screen.queryByRole("button", { name: "Unlock Card" });
+    if (unlock !== null) {
+      await user.click(unlock);
+      expect(screen.getByRole("button", { name: "Lock Card" })).toBeInTheDocument();
+    }
+    expect(screen.queryByRole("button", { name: "Reveal Cards" })).not.toBeInTheDocument();
   });
 });

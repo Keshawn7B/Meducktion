@@ -23,6 +23,7 @@ export interface CardView {
   readonly selected: boolean;
   readonly locked: boolean;
   readonly disabled: boolean;
+  readonly dimmed: boolean;
 }
 
 export interface ConditionView {
@@ -38,6 +39,8 @@ export interface ClueView {
   readonly explanation?: string;
   readonly visibility: "public" | "private";
   readonly isNew?: boolean;
+  readonly answer?: "yes" | "no";
+  readonly question?: string;
 }
 
 export interface OpponentView {
@@ -56,6 +59,7 @@ export interface CardRevealView {
   readonly category: CardCategory;
   readonly clue?: ClueView;
   readonly clueIsHidden: boolean;
+  readonly effectText?: string;
 }
 
 export interface ScoreBreakdownView {
@@ -91,8 +95,10 @@ export interface CardAppModel {
   readonly legacySaveNotice?: string;
   readonly errorMessage?: string;
   readonly setup: {
+    readonly selectedCaseId: string;
     readonly suggestedPlayerName: string;
     readonly selectedCaseName: string;
+    readonly availableCases: readonly { readonly id: string; readonly title: string; readonly patientName: string }[];
     readonly opponentName: string;
     readonly opponentStyle: string;
     readonly playerCount: 2 | 3 | 4;
@@ -125,6 +131,7 @@ export interface CardAppModel {
     readonly humanHasDiagnosed: boolean;
     readonly mustDiagnose: boolean;
     readonly canLock: boolean;
+    readonly canUnlock: boolean;
     readonly canReveal: boolean;
     readonly revealActionLabel: "Reveal Cards" | "Review Clues";
     readonly canAdvance: boolean;
@@ -142,11 +149,12 @@ export interface CardAppModel {
 export interface StartMatchInput {
   readonly playerName: string;
   readonly playerCount: 2 | 3 | 4;
+  readonly caseId: string;
 }
 
 export interface DiagnosisInput {
   readonly conditionId: string;
-  readonly clueIds: [string, string];
+  readonly clueIds: readonly string[];
 }
 
 export interface CardAppActions {
@@ -158,6 +166,7 @@ export interface CardAppActions {
   readonly toggleCard: (cardId: string) => void;
   readonly useRedraw: () => void;
   readonly lockCard: () => void;
+  readonly unlockCard: () => void;
   readonly revealCards: () => void;
   readonly advanceRound: () => void;
   readonly submitDiagnosis: (input: DiagnosisInput) => void;

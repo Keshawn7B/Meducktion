@@ -35,7 +35,6 @@ const publicAsset = (filename: string) =>
   `${import.meta.env.BASE_URL}assets/${filename}`;
 
 const duckLogoAsset = publicAsset("meducktion-medical-duck-logo.webp");
-
 const opponentPortraits: Record<string, string> = {
   "Dr. Beak": publicAsset("opponent-dr-beak.webp"),
   Mira: publicAsset("opponent-mira.webp"),
@@ -52,26 +51,26 @@ const tutorialPanels = [
   {
     eyebrow: "Choose carefully",
     title: "Play one card each round",
-    body: "Pick an Ask, Check, Test, or Special card. You can change your selection before locking and redraw your full hand once per match.",
+    body: "Pick an Ask, Check, or Test question. Every card gives you a private YES or NO answer. You can change your selection before locking.",
     symbol: "1",
   },
   {
     eyebrow: "Follow the evidence",
-    title: "Cards reveal clues",
-    body: "Some clues are shared with everyone. Others remain private and give you a different path to the answer.",
+    title: "Build YES and NO piles",
+    body: "Your answers stay hidden from opponents. Compare your private YES and NO piles to eliminate conditions and find the best fit.",
     symbol: "?",
   },
   {
     eyebrow: "Make your diagnosis",
-    title: "Diagnose after Round 2",
-    body: "After each reveal from Round 2 onward, diagnose or keep investigating. A wrong diagnosis costs 150 points, but you can continue playing.",
-    symbol: "2",
+    title: "Guess whenever you are ready",
+    body: "You may diagnose during any round. A wrong guess removes your newest answer and uses one of your two attempts.",
+    symbol: "?",
   },
   {
     eyebrow: "Win the match",
-    title: "Highest score wins",
-    body: "Earn points for a correct diagnosis, supporting clues, good timing, and efficient investigation.",
-    symbol: "1K",
+    title: "First correct diagnosis wins",
+    body: "There are no points and no first-place ties. The match ends as soon as one player calls the case correctly.",
+    symbol: "1",
   },
 ] as const;
 
@@ -258,7 +257,7 @@ function SetupScreen({
         <section className="paper-panel setup-panel" aria-labelledby="setup-title">
           <p className="playful-kicker">Local match setup</p>
           <h1 id="setup-title">Set up your match</h1>
-          <p>One fictional case. Four rounds. Highest score wins.</p>
+          <p>A mystery will be drawn at random. Build YES and NO evidence piles, then diagnose before your opponents.</p>
           <label className="field-label" htmlFor={nameId}>
             Your player name
           </label>
@@ -289,6 +288,7 @@ function SetupScreen({
               actions.startMatch({
                 playerName: name.trim(),
                 playerCount: model.setup.playerCount,
+                caseId: "random",
               })
             }
           >
@@ -300,9 +300,9 @@ function SetupScreen({
             <span className="ticket-icon" aria-hidden="true">
               &#x2666;
             </span>
-            <p>Selected case</p>
-            <h2>{model.setup.selectedCaseName}</h2>
-            <span>Fictional case &middot; Beginner friendly</span>
+            <p>Case draw</p>
+            <h2>Random mystery</h2>
+            <span>Patient and scenario revealed after the draw</span>
           </div>
           <div className="opponent-ticket">
             <div className="bot-avatar" aria-hidden="true">
@@ -317,7 +317,8 @@ function SetupScreen({
           <ol className="micro-rules" aria-label="Short rules summary">
             <li>Choose one card each round.</li>
             <li>Use clues to narrow four conditions.</li>
-            <li>Diagnose after Round 2 for timing points.</li>
+            <li>Diagnose whenever you are ready.</li>
+            <li>The first correct diagnosis wins.</li>
           </ol>
         </aside>
       </div>
@@ -395,18 +396,16 @@ function MatchScreen({
     ? "Diagnosis submitted"
     : match.diagnosisUnlocked
       ? "Diagnose"
-      : match.round < 2
-        ? "Diagnose after Round 2"
-        : "Diagnose after reveal";
+      : "Diagnose after reveal";
   const roundDecisionMessage = match.mustDiagnose
-    ? "This is the final round. Choose a condition and two clues before finishing."
+    ? "This is the final round. Choose a condition before finishing."
     : match.humanHasDiagnosed
     ? "Your diagnosis is locked in. Continue to see how the room finishes."
     : match.diagnosisBlockedUntilNextRound
       ? "Your next diagnosis attempt unlocks next round. Keep investigating."
       : match.diagnosisUnlocked
-        ? "Call the case now for more timing points, or keep investigating."
-        : "Diagnosis unlocks after Round 2. Continue investigating for now.";
+        ? "Call the case whenever you are confident. The first correct diagnosis wins."
+        : "Finish this reveal, then continue investigating or diagnose.";
 
   return (
     <>
@@ -439,7 +438,7 @@ function MatchScreen({
       </header>
       <nav className="match-jump-nav" aria-label="Match sections">
         <a href="#patient-card">Patient</a>
-        <a href="#clue-board">Clues</a>
+        <a href="#private-evidence">Evidence</a>
         <a href="#player-hand">Your hand</a>
       </nav>
       <main id="meducktion-main" className="match-screen">
@@ -489,23 +488,14 @@ function MatchScreen({
               <h1 id="patient-table-name">{model.patient.displayName} <small>Age {model.patient.age}</small></h1>
               <p className="patient-table-story">{model.patient.shortStory}</p>
               <div className="patient-latest-clue">
-                <small>Latest shared clue</small>
-                <strong>{match.publicClues.at(-1)?.title ?? model.patient.startingSymptom}</strong>
+                <small>Starting symptom</small>
+                <strong>{model.patient.startingSymptom}</strong>
               </div>
-              <aside className="event-card" aria-label="Shared event">
+              <aside className="event-card" aria-label="Table event">
                 <span aria-hidden="true">&#x2605;</span>
-                <div><small>Shared event</small><strong>{match.sharedEvent?.title ?? "Event pending"}</strong><p>{match.sharedEvent?.description ?? "One shared event will appear during this match."}</p></div>
+                <div><small>Table event</small><strong>{match.sharedEvent?.title ?? "Event pending"}</strong><p>{match.sharedEvent?.description ?? "One table event will appear during this match."}</p></div>
               </aside>
             </article>
-
-            <section id="clue-board" className="table-shared-clues" aria-labelledby="clue-title">
-              <div className="table-section-title">
-                <span aria-hidden="true">&#x2726;</span>
-                <div><small>Visible to everyone</small><h2 id="clue-title">Shared clues</h2></div>
-                <b className="count-pill">{match.publicClues.length}</b>
-              </div>
-              <ClueList clues={match.publicClues} empty="Shared clues will appear here." />
-            </section>
 
             <section className="reveal-table table-reveal-zone" aria-labelledby="reveal-title" aria-live="polite">
             <div className="section-heading compact-heading">
@@ -527,8 +517,8 @@ function MatchScreen({
                     {reveal.clue ? (
                       <p>{reveal.clue.title}</p>
                     ) : reveal.clueIsHidden ? (
-                      <p className="hidden-clue">Private clue collected</p>
-                    ) : null}
+                      <p className="hidden-clue">Opponent received an answer</p>
+                    ) : reveal.effectText ? <p>{reveal.effectText}</p> : null}
                   </article>
                 ))}
               </div>
@@ -543,9 +533,9 @@ function MatchScreen({
         </section>
 
         <section id="player-hand" className="hand-dock" aria-labelledby="hand-title">
-          <div className="private-clue-zone player-private-clues" aria-labelledby="private-clue-title">
-            <div><h3 id="private-clue-title">Your private clues</h3><span>Hidden from your opponent</span></div>
-            <ClueList clues={match.privateClues} empty="No private clues yet." />
+          <div id="private-evidence" className="private-clue-zone player-private-clues" aria-labelledby="private-clue-title">
+            <div><h3 id="private-clue-title">Your YES / NO evidence</h3><span>{match.privateClues.length} answers</span></div>
+            <DeductionPiles clues={match.privateClues} />
           </div>
           <div className="hand-heading">
             <div>
@@ -588,7 +578,7 @@ function MatchScreen({
               ))}
             </div>
           )}
-          {(match.canLock || match.canReveal) && <div className="match-actions">
+          {(match.canLock || match.canUnlock) && <div className="match-actions">
             {match.canLock && (
               <button
                 className="button button-primary button-large"
@@ -598,13 +588,13 @@ function MatchScreen({
                 Lock Card
               </button>
             )}
-            {match.canReveal && (
-              <button className="button button-primary button-large" disabled={onlineBlocked} onClick={actions.revealCards}>
-                {match.revealActionLabel}
+            {match.canUnlock && (
+              <button className="button button-cream button-large" disabled={onlineBlocked} onClick={actions.unlockCard}>
+                Unlock Card
               </button>
             )}
           </div>}
-          {(match.canAdvance || match.mustDiagnose) && (
+          {match.mustDiagnose && (
             <section className="round-decision" aria-labelledby="round-decision-title">
               <div>
                 <p className="playful-kicker">Your decision</p>
@@ -619,15 +609,6 @@ function MatchScreen({
                     onClick={() => setDiagnosisOpen(true)}
                   >
                     Diagnose now
-                  </button>
-                )}
-                {!match.mustDiagnose && (
-                  <button
-                    className={`button button-large ${match.diagnosisUnlocked ? "button-cream" : "button-primary"}`}
-                    disabled={onlineBlocked}
-                    onClick={actions.advanceRound}
-                  >
-                    {match.round === match.maximumRounds ? "Finish Match" : "Keep investigating"}
                   </button>
                 )}
               </div>
@@ -653,12 +634,11 @@ function MatchScreen({
 }
 
 function InvestigationCard({ card, onToggle }: { card: CardView; onToggle: () => void }) {
-  const visibilityLabel = card.visibility === "public" ? "Shared clue" : "Private clue";
-  const label = `${categoryLabels[card.category]} card: ${card.title}. ${visibilityLabel}. ${card.description}${card.selected ? ". Selected" : ""}${card.locked ? ". Locked" : ""}`;
+  const label = `${categoryLabels[card.category]} question: ${card.title}. Reveals YES or NO${card.selected ? ". Selected" : ""}${card.locked ? ". Locked" : ""}`;
   return (
     <button
       type="button"
-      className={`investigation-card category-${card.category}${card.selected ? " is-selected" : ""}${card.locked ? " is-locked" : ""}`}
+      className={`investigation-card category-${card.category}${card.selected ? " is-selected" : ""}${card.locked ? " is-locked" : ""}${card.dimmed ? " is-dimmed" : ""}`}
       aria-label={label}
       aria-pressed={card.selected}
       disabled={card.disabled || card.locked}
@@ -670,16 +650,11 @@ function InvestigationCard({ card, onToggle }: { card: CardView; onToggle: () =>
         </span>
         {categoryLabels[card.category]}
       </span>
-      <span className="card-art" aria-hidden="true">
-        {card.icon ?? categoryIcons[card.category]}
-      </span>
       <span className="card-copy">
         <strong>{card.title}</strong>
-        <span>{card.description}</span>
       </span>
-      <span className={`card-visibility visibility-${card.visibility}`}>
-        <span aria-hidden="true">{card.visibility === "public" ? "\u25ce" : "\u25c9"}</span>
-        {visibilityLabel}
+      <span className="card-answer-preview" aria-hidden="true">
+        <b>YES</b><i>or</i><b>NO</b>
       </span>
       {card.beginnerHint && <small>{card.beginnerHint}</small>}
       {card.locked && <span className="locked-badge">Locked</span>}
@@ -700,34 +675,18 @@ function DiagnosisPanel({
   onSubmit: (input: DiagnosisInput) => void;
 }) {
   const [conditionId, setConditionId] = useState("");
-  const [clueIds, setClueIds] = useState<string[]>([]);
   const [error, setError] = useState("");
   const titleRef = useRef<HTMLHeadingElement>(null);
-  const clues = [...model.match.publicClues, ...model.match.privateClues];
 
   useDialogFocus(titleRef, onClose);
 
-  function toggleClue(id: string) {
-    setError("");
-    setClueIds((current) =>
-      current.includes(id)
-        ? current.filter((clueId) => clueId !== id)
-        : current.length < 2
-          ? [...current, id]
-          : current,
-    );
-  }
-
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!conditionId || clueIds.length !== 2) {
-      setError("Choose one condition and exactly two clues before submitting.");
+    if (!conditionId) {
+      setError("Choose one condition before submitting.");
       return;
     }
-    const first = clueIds[0];
-    const second = clueIds[1];
-    if (!first || !second) return;
-    onSubmit({ conditionId, clueIds: [first, second] });
+    onSubmit({ conditionId, clueIds: [] });
   }
 
   return (
@@ -746,12 +705,12 @@ function DiagnosisPanel({
           Which condition explains the clues?
         </h2>
         <p>
-          Pick one condition and two clues that influenced you. You have{" "}
+          Pick one condition. A correct diagnosis wins immediately. You have{" "}
           <strong>{model.match.diagnosisAttemptsRemaining} attempt(s)</strong> remaining.
         </p>
         <p className="consequence-note">
-          A wrong diagnosis costs 150 points. Your clues remain available, and
-          you can continue investigating.
+          A wrong diagnosis removes your newest answer and uses an attempt. You
+          can try again in the next round.
         </p>
         <form onSubmit={submit} noValidate>
           <fieldset className="diagnosis-choices">
@@ -772,27 +731,6 @@ function DiagnosisPanel({
                 <strong>{condition.displayName}</strong>
               </label>
             ))}
-          </fieldset>
-          <fieldset className="diagnosis-clues">
-            <legend>
-              Choose exactly two clues <span>{clueIds.length}/2</span>
-            </legend>
-            {clues.length > 0 ? (
-              clues.map((clue) => (
-                <label key={clue.id}>
-                  <input
-                    type="checkbox"
-                    checked={clueIds.includes(clue.id)}
-                    disabled={!clueIds.includes(clue.id) && clueIds.length === 2}
-                    onChange={() => toggleClue(clue.id)}
-                  />
-                  <span>{clue.title}</span>
-                  <small>{clue.visibility === "public" ? "Shared clue" : "Your private clue"}</small>
-                </label>
-              ))
-            ) : (
-              <p className="empty-state">Reveal more clues before making a diagnosis.</p>
-            )}
           </fieldset>
           {error && (
             <p className="form-error" role="alert" aria-live="assertive">
@@ -818,13 +756,10 @@ function ResultsScreen({ model, actions }: ScreenProps) {
     );
   }
   const human = results.rankings.find((player) => player.isHuman);
-  const firstPlaceCount = results.rankings.filter((player) => player.placement === 1).length;
   const humanOutcome = human
     ? human.placement === 1
-      ? firstPlaceCount > 1
-        ? "You shared first place."
-        : "You won the room."
-      : `You placed #${human.placement}.`
+      ? "You solved the case first."
+      : "Another player solved the case first."
     : "";
 
   return (
@@ -838,7 +773,7 @@ function ResultsScreen({ model, actions }: ScreenProps) {
       </div>
       <section className="winner-hero" aria-labelledby="winner-title">
         <p className="playful-kicker">Match complete</p>
-        <h1 id="winner-title">{results.winnerName} wins!</h1>
+        <h1 id="winner-title">{results.winnerName ? `${results.winnerName} wins!` : "Case closed"}</h1>
         <p>
           The correct condition was <strong>{results.hiddenDiagnosisName}</strong>.
         </p>
@@ -852,11 +787,6 @@ function ResultsScreen({ model, actions }: ScreenProps) {
                   : "Your final diagnosis did not solve this case."}
               </span>
             </p>
-            <div className="human-score">
-              <span>Your score</span>
-              <strong>{human.totalScore}</strong>
-              <small>/ 1,000 points</small>
-            </div>
           </div>
         )}
       </section>
@@ -867,9 +797,6 @@ function ResultsScreen({ model, actions }: ScreenProps) {
             <h2 id="ranking-title">Player rankings</h2>
           </div>
         </div>
-        <p className="tie-break-note">
-          Winner decided by: <strong>{results.tieBreakLabel}</strong>.
-        </p>
         <div className="rank-list">
           {results.rankings.map((player) => (
             <article className={`rank-card${player.placement === 1 ? " rank-winner" : ""}`} key={player.playerId}>
@@ -882,8 +809,7 @@ function ResultsScreen({ model, actions }: ScreenProps) {
                   {player.diagnosisName} &middot; {player.diagnosisCorrect ? "Correct" : "Not solved"}
                 </span>
               </div>
-              <strong className="rank-total">{player.totalScore}</strong>
-              <ScoreDetails player={player} />
+              {player.placement === 1 && <strong className="rank-total">Winner</strong>}
             </article>
           ))}
         </div>
@@ -919,24 +845,6 @@ function ResultsScreen({ model, actions }: ScreenProps) {
       </button>
       <Disclaimer />
     </main>
-  );
-}
-
-function ScoreDetails({ player }: { player: NonNullable<CardAppModel["results"]>["rankings"][number] }) {
-  const score = player.breakdown;
-  return (
-    <details className="score-details" open={player.isHuman}>
-      <summary>Score details</summary>
-      <dl>
-        <div><dt>Correct diagnosis</dt><dd>{score.correctDiagnosis}</dd></div>
-        <div><dt>Supporting clues</dt><dd>{score.supportingClues}</dd></div>
-        <div><dt>Timing</dt><dd>{score.timing}</dd></div>
-        <div><dt>Efficient investigation</dt><dd>{score.efficiency}</dd></div>
-        <div><dt>Achievement</dt><dd>{score.achievement}</dd></div>
-        <div><dt>Wrong-attempt penalties</dt><dd>{score.wrongAttemptPenalties}</dd></div>
-      </dl>
-      {player.achievementName && <p className="achievement-chip">&#x2605; {player.achievementName}</p>}
-    </details>
   );
 }
 
@@ -1068,6 +976,30 @@ function ClueList({ clues, empty }: { clues: readonly ClueView[]; empty: string 
         </li>
       ))}
     </ul>
+  );
+}
+
+function DeductionPiles({ clues }: { clues: readonly ClueView[] }) {
+  const piles = (["yes", "no"] as const).map((answer) => ({
+    answer,
+    clues: clues.filter((clue) => clue.answer === answer),
+  }));
+  const unassigned = clues.filter((clue) => clue.answer === undefined);
+  return (
+    <div className="deduction-piles" aria-label="Revealed YES and NO evidence piles">
+      {piles.map((pile) => (
+        <section className={`deduction-pile pile-${pile.answer}`} key={pile.answer} aria-label={`${pile.answer.toUpperCase()} evidence`}>
+          <header><strong>{pile.answer.toUpperCase()}</strong><span>{pile.clues.length}</span></header>
+          {pile.clues.length === 0 ? <p>No answers yet</p> : pile.clues.map((clue) => (
+            <article className={clue.isNew ? "is-new" : ""} key={clue.id}>
+              <small>{clue.question ?? "Evidence"}</small>
+              <strong>{clue.title.replace(/^Yes\s*[—-]\s*|^No\s*[—-]\s*/i, "")}</strong>
+            </article>
+          ))}
+        </section>
+      ))}
+      {unassigned.length > 0 && <ClueList clues={unassigned} empty="" />}
+    </div>
   );
 }
 

@@ -12,6 +12,7 @@ export interface MultiplayerLobbyModel {
   readonly operation: "create" | "join" | "ready" | "start" | "leave" | null;
   readonly errorMessage?: string;
   readonly roomCode?: string;
+  readonly caseTitle?: string;
   readonly maximumPlayers: 2 | 3 | 4;
   readonly isHost: boolean;
   readonly currentPlayerReady: boolean;

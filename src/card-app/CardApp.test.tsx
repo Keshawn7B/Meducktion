@@ -23,8 +23,10 @@ function model(screen: CardAppModel["screen"], patch?: Partial<CardAppModel["mat
     screen,
     canResume: false,
     setup: {
+      selectedCaseId: "case.the-pain-that-moved",
       suggestedPlayerName: "Detective",
       selectedCaseName: "The Pain That Moved",
+      availableCases: [{ id: "case.the-pain-that-moved", title: "The Pain That Moved", patientName: "Jordan Lee" }],
       opponentName: "Bailey",
       opponentStyle: "Balanced",
       playerCount: 2,
@@ -51,41 +53,47 @@ function model(screen: CardAppModel["screen"], patch?: Partial<CardAppModel["mat
           selected: false,
           locked: false,
           disabled: false,
+          dimmed: true,
         },
         {
           id: "card.check.abdomen",
-          title: "Examine the abdomen",
+          title: "Tender abdomen?",
           category: "check",
           visibility: "private",
-          description: "Gently check where it feels tender.",
+          description: "Reveal a private YES or NO answer.",
           selected: true,
           locked: false,
           disabled: false,
+          dimmed: false,
         },
         {
           id: "card.test.blood",
-          title: "Blood test",
+          title: "Urine clear?",
           category: "test",
-          visibility: "public",
-          description: "Look for a simple sign of inflammation.",
+          visibility: "private",
+          description: "Reveal a private YES or NO answer.",
           selected: false,
           locked: false,
           disabled: false,
+          dimmed: true,
         },
       ],
-      publicClues: [
+      publicClues: [],
+      privateClues: [
         {
           id: "clue.pain-moved",
           title: "The pain moved to the lower-right side.",
-          visibility: "public",
+          visibility: "private",
+          question: "Did the pain move?",
+          answer: "yes",
           isNew: true,
         },
-      ],
-      privateClues: [
         {
           id: "clue.low-appetite",
           title: "Jordan has little appetite.",
           visibility: "private",
+          question: "Is Jordan eating normally?",
+          answer: "no",
         },
       ],
       opponents: [
@@ -113,7 +121,7 @@ function model(screen: CardAppModel["screen"], patch?: Partial<CardAppModel["mat
         {
           playerId: "player.bot",
           playerName: "Bailey",
-          cardTitle: "Blood test",
+          cardTitle: "Urine clear?",
           category: "test",
           clueIsHidden: true,
         },
@@ -125,6 +133,7 @@ function model(screen: CardAppModel["screen"], patch?: Partial<CardAppModel["mat
       humanHasDiagnosed: false,
       mustDiagnose: false,
       canLock: true,
+      canUnlock: false,
       canReveal: false,
       revealActionLabel: "Reveal Cards",
       canAdvance: false,
@@ -145,6 +154,7 @@ function actions(): CardAppActions {
     toggleCard: vi.fn(),
     useRedraw: vi.fn(),
     lockCard: vi.fn(),
+    unlockCard: vi.fn(),
     revealCards: vi.fn(),
     advanceRound: vi.fn(),
     submitDiagnosis: vi.fn(),
@@ -207,7 +217,11 @@ describe("competitive card-game UI", () => {
     expect(screen.getByRole("button", { name: "Start Match" })).toBeDisabled();
     await user.type(screen.getByLabelText("Your player name"), "Alex");
     await user.click(screen.getByRole("button", { name: "Start Match" }));
-    expect(calls.startMatch).toHaveBeenCalledWith({ playerName: "Alex", playerCount: 2 });
+    expect(calls.startMatch).toHaveBeenCalledWith({
+      playerName: "Alex",
+      playerCount: 2,
+      caseId: "random",
+    });
     expect(screen.getByText(/one human and one deterministic bot/i)).toBeInTheDocument();
   });
 
@@ -225,27 +239,31 @@ describe("competitive card-game UI", () => {
     const user = userEvent.setup();
     const calls = actions();
     render(<CardApp model={model("match")} actions={calls} />);
-    const cards = screen.getAllByRole("button", { name: /card:/i });
+    const cards = screen.getAllByRole("button", { name: /question:/i });
     expect(cards).toHaveLength(3);
     expect(cards[0]?.parentElement).toHaveClass("card-hand");
     expect(cards.every((card) => card.classList.contains("investigation-card"))).toBe(true);
-    expect(screen.getAllByText("Private clue")).toHaveLength(2);
-    expect(screen.getByText("Shared clue")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Check card: Examine the abdomen.*Selected/i })).toHaveClass("is-selected");
-    await user.click(screen.getByRole("button", { name: /Ask card: Did the pain move/i }));
+    expect(cards[0]).toHaveClass("is-dimmed");
+    expect(cards[1]).not.toHaveClass("is-dimmed");
+    expect(cards[2]).toHaveClass("is-dimmed");
+    expect(cards.every((card) => card.querySelector(".card-art") === null)).toBe(true);
+    expect(cards.every((card) => card.querySelector(".card-visibility") === null)).toBe(true);
+    expect(screen.getAllByText("YES")).toHaveLength(4);
+    expect(screen.getAllByText("NO")).toHaveLength(4);
+    expect(screen.getByRole("button", { name: /Check question: Tender abdomen.*Selected/i })).toHaveClass("is-selected");
+    await user.click(screen.getByRole("button", { name: /Ask question: Did the pain move/i }));
     expect(calls.toggleCard).toHaveBeenCalledWith("card.ask.pain-move");
     await user.click(screen.getByRole("button", { name: "Lock Card" }));
     expect(calls.lockCard).toHaveBeenCalledOnce();
   });
 
-  it("keeps public, private, and opponent-hidden clues distinct", () => {
+  it("keeps every answer in the player's private YES and NO piles", () => {
     render(<CardApp model={model("match")} actions={actions()} />);
-    expect(screen.getByRole("heading", { name: "Shared clues" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Your private clues" })).toBeInTheDocument();
-    expect(screen.getAllByText("Shared with room").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Private to you").length).toBeGreaterThan(0);
-    expect(screen.getByText("Jordan has little appetite.")).toBeInTheDocument();
-    expect(screen.getByText("Private clue collected")).toBeInTheDocument();
+    expect(screen.queryByText(/shared clue|shared with room|private clue|private to you/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Your YES / NO evidence" })).toBeInTheDocument();
+    expect(screen.getByLabelText("YES evidence")).toHaveTextContent("The pain moved to the lower-right side.");
+    expect(screen.getByLabelText("NO evidence")).toHaveTextContent("Jordan has little appetite.");
+    expect(screen.getByText("Opponent received an answer")).toBeInTheDocument();
     const opponentCards = screen.getByLabelText("Three face-down opponent cards");
     expect(opponentCards.children).toHaveLength(3);
     expect(opponentCards.querySelectorAll('img[src$="/assets/meducktion-medical-duck-logo.webp"]')).toHaveLength(3);
@@ -259,24 +277,26 @@ describe("competitive card-game UI", () => {
       locked: card.selected,
       disabled: true,
     }));
-    render(<CardApp model={model("match", { hand: lockedHand, canLock: false, canReveal: true, phase: "cards_locked" })} actions={actions()} />);
-    expect(screen.getAllByRole("button", { name: /card:/i })).toHaveLength(3);
-    expect(screen.getByRole("button", { name: /Examine the abdomen.*Locked/i })).toHaveClass("is-locked");
+    render(<CardApp model={model("match", { hand: lockedHand, canLock: false, canUnlock: true, canReveal: false, phase: "card_selection" })} actions={actions()} />);
+    expect(screen.getAllByRole("button", { name: /question:/i })).toHaveLength(3);
+    expect(screen.getByRole("button", { name: /Tender abdomen.*Locked/i })).toHaveClass("is-locked");
     expect(screen.getAllByText("Locked").length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: "Reveal Cards" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Unlock Card" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reveal Cards" })).not.toBeInTheDocument();
   });
 
-  it("emits redraw and reveal lifecycle actions", async () => {
+  it("emits redraw and unlock actions while reveal remains automatic", async () => {
     const user = userEvent.setup();
     const redrawCalls = actions();
     const { rerender } = render(<CardApp model={model("match")} actions={redrawCalls} />);
     await user.click(screen.getByRole("button", { name: /Redraw hand/i }));
     expect(redrawCalls.useRedraw).toHaveBeenCalledOnce();
 
-    const revealCalls = actions();
-    rerender(<CardApp model={model("match", { canLock: false, canReveal: true, phase: "cards_locked" })} actions={revealCalls} />);
-    await user.click(screen.getByRole("button", { name: "Reveal Cards" }));
-    expect(revealCalls.revealCards).toHaveBeenCalledOnce();
+    const unlockCalls = actions();
+    rerender(<CardApp model={model("match", { canLock: false, canUnlock: true, canReveal: false })} actions={unlockCalls} />);
+    await user.click(screen.getByRole("button", { name: "Unlock Card" }));
+    expect(unlockCalls.unlockCard).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("button", { name: "Reveal Cards" })).not.toBeInTheDocument();
   });
 
   it("offers an explicit leave control only for online matches", async () => {
@@ -314,13 +334,13 @@ describe("competitive card-game UI", () => {
     expect(screen.getByText("Reconnecting")).toBeInTheDocument();
   });
 
-  it("shows diagnosis timing and validates the simple diagnosis form", async () => {
+  it("allows a condition-only diagnosis whenever it is available", async () => {
     const user = userEvent.setup();
     const calls = actions();
     const { rerender } = render(
       <CardApp model={model("match", { diagnosisUnlocked: false, round: 1 })} actions={calls} />,
     );
-    expect(screen.getByRole("button", { name: "Diagnose after Round 2" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Diagnose after reveal" })).toBeDisabled();
 
     rerender(
       <CardApp
@@ -333,15 +353,13 @@ describe("competitive card-game UI", () => {
     rerender(<CardApp model={model("match")} actions={calls} />);
     await user.click(screen.getByRole("button", { name: "Diagnose" }));
     await user.click(screen.getByRole("button", { name: "Confirm Diagnosis" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Choose one condition and exactly two clues");
+    expect(screen.getByRole("alert")).toHaveTextContent("Choose one condition");
 
     await user.click(screen.getByLabelText(/Appendicitis/));
-    await user.click(screen.getByLabelText(/The pain moved to the lower-right side/));
-    await user.click(screen.getByLabelText(/Jordan has little appetite/));
     await user.click(screen.getByRole("button", { name: "Confirm Diagnosis" }));
     expect(calls.submitDiagnosis).toHaveBeenCalledWith({
       conditionId: "condition.appendicitis",
-      clueIds: ["clue.pain-moved", "clue.low-appetite"],
+      clueIds: [],
     });
   });
 
@@ -352,7 +370,7 @@ describe("competitive card-game UI", () => {
     expect(screen.getByRole("link", { name: "Your hand" })).toHaveAttribute("href", "#player-hand");
   });
 
-  it("renders winner, score categories, investigation paths, and educational recap", async () => {
+  it("renders the first correct winner, investigation paths, and educational recap", async () => {
     const user = userEvent.setup();
     const resultModel: CardAppModel = {
       ...model("results"),
@@ -405,14 +423,12 @@ describe("competitive card-game UI", () => {
     const calls = actions();
     render(<CardApp model={resultModel} actions={calls} />);
     expect(screen.getByRole("heading", { name: "Alex wins!" })).toBeInTheDocument();
-    expect(screen.getByText("You won the room.")).toBeInTheDocument();
+    expect(screen.getByText("You solved the case first.")).toBeInTheDocument();
     expect(screen.getByText("Your Appendicitis diagnosis was correct.")).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/\\u[0-9a-f]{4}/i);
-    expect(screen.getAllByText("950")).toHaveLength(3);
-    expect(screen.getByText(/seeded mystery draw/i)).toBeInTheDocument();
-    expect(screen.getByText(/Winner decided by/i)).toBeInTheDocument();
-    expect(screen.getAllByText("Score details")[0]?.closest("details")).toHaveAttribute("open");
-    expect(screen.getAllByText("Correct diagnosis")).toHaveLength(2);
+    expect(screen.queryByText("950")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Winner decided by/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("Score details")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Investigation paths" })).toBeInTheDocument();
     expect(screen.getByText(/moving pain, loss of appetite/i)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Play Again" }));

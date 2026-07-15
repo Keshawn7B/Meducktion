@@ -21,21 +21,40 @@ describe("competitive card content", () => {
     ]);
   });
 
+  it("offers 25 cases built around the same large private YES and NO deck", () => {
+    expect(cardCaseRegistry).toHaveLength(25);
+    const expectedQuestions = thePainThatMovedCardCase.cards.map((card) => card.displayName);
+    for (const cardCase of cardCaseRegistry) {
+      expect(cardCase.conditions).toHaveLength(4);
+      expect(cardCase.cards).toHaveLength(24);
+      expect(cardCase.cards.map((card) => card.displayName)).toEqual(expectedQuestions);
+      expect(new Set(cardCase.clues.map((clue) => clue.answer))).toEqual(
+        new Set(["yes", "no"]),
+      );
+      expect(cardCase.clues.every((clue) => clue.question.trim().length > 0)).toBe(true);
+      expect(
+        cardCase.cards.filter(
+          (card) => card.result.type === "reveal_clue" && card.visibility === "private",
+        ).length,
+      ).toBe(24);
+      expect(cardCase.cards.every((card) => card.copies === 1)).toBe(true);
+      expect(new Set(cardCase.cards.map((card) => card.id)).size).toBe(24);
+    }
+  });
+
   it("preserves stable case, patient, diagnosis, and clue IDs", () => {
     expect(thePainThatMovedCardCase.caseId).toBe("case.the-pain-that-moved");
     expect(thePainThatMovedCardCase.patient.id).toBe("patient.jordan-lee");
     expect(thePainThatMovedCardCase.correctConditionId).toBe(
       "diagnosis.appendicitis",
     );
-    expect(
-      thePainThatMovedCardCase.clues.map((clue) => clue.id),
-    ).toContain("clue.pain-migrated-lower-right");
+    expect(thePainThatMovedCardCase.contentVersion).toContain("race-deduction");
   });
 
-  it("uses exactly Ask, Check, Test, and Special categories", () => {
+  it("uses only Ask, Check, and Test question categories", () => {
     expect(
       new Set(thePainThatMovedCardCase.cards.map((card) => card.category)),
-    ).toEqual(new Set(["ask", "check", "test", "special"]));
+    ).toEqual(new Set(["ask", "check", "test"]));
   });
 
   it("makes Test cards less frequent than Ask and Check cards", () => {
@@ -47,10 +66,21 @@ describe("competitive card content", () => {
     expect(copiesByCategory("test")).toBeLessThan(copiesByCategory("check"));
   });
 
-  it("contains no more than five authored Special cards", () => {
-    expect(
-      thePainThatMovedCardCase.cards.filter((card) => card.category === "special"),
-    ).toHaveLength(5);
+  it("contains no Special cards or public clue cards", () => {
+    expect(cardCaseRegistry.flatMap((cardCase) => cardCase.cards).every(
+      (card) => card.category !== "special" && card.visibility === "private" && card.result.type === "reveal_clue",
+    )).toBe(true);
+  });
+
+  it("gives every condition a distinct answer profile within its case", () => {
+    for (const cardCase of cardCaseRegistry) {
+      const profiles = cardCase.conditions.map((condition) =>
+        cardCase.clues
+          .map((clue) => clue.supportsConditionIds.includes(condition.id) ? "1" : "0")
+          .join(""),
+      );
+      expect(new Set(profiles).size).toBe(4);
+    }
   });
 
   it("excludes cards that are incompatible with the active case", () => {
@@ -90,16 +120,13 @@ describe("competitive card content", () => {
     );
   });
 
-  it("keeps allowed duplicate cards as distinct deck instances", () => {
+  it("never gives a player duplicate question cards", () => {
     const state = createCardMatch(thePainThatMovedCardCase, {
       seed: "duplicates",
     });
     const player = state.players["player.you"];
     expect(player).toBeDefined();
-    const movementCards = player?.deck.drawPile.filter(
-      (instance) => instance.cardId === "card.ask.pain-movement",
-    );
-    expect(movementCards).toHaveLength(2);
-    expect(new Set(movementCards?.map((card) => card.instanceId)).size).toBe(2);
+    const cardIds = player?.deck.drawPile.map((instance) => instance.cardId) ?? [];
+    expect(new Set(cardIds).size).toBe(cardIds.length);
   });
 });

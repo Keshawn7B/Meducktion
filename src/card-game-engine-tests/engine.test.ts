@@ -132,9 +132,9 @@ function diagnosisState(round = 2): MatchState {
     throw new Error("Missing test player.");
   }
   const clue: PrivateClue = {
-    clueId: "clue.pain-migrated-lower-right",
+    clueId: supportClues[1],
     round,
-    sourceId: "card.ask.pain-movement",
+    sourceId: "fixture.answer",
     visibility: "private",
     playerId: player.id,
   };
@@ -142,10 +142,10 @@ function diagnosisState(round = 2): MatchState {
   return state;
 }
 
-const supportClues: [string, string] = [
-  "clue.pain-started-central",
-  "clue.pain-migrated-lower-right",
-];
+const supportingClueIds = content.clues
+  .filter((clue) => clue.supportsConditionIds.includes(content.correctConditionId))
+  .map((clue) => clue.id);
+const supportClues: [string, string] = [supportingClueIds[0]!, supportingClueIds[1]!];
 
 function completeExactTie(
   seed: string,
@@ -163,14 +163,14 @@ function completeExactTie(
     const player = state.players[playerId];
     if (player === undefined) continue;
     player.privateClues.push({
-      clueId: "clue.pain-migrated-lower-right",
+      clueId: supportClues[1],
       round: 2,
       sourceId: "fixture",
       visibility: "private",
       playerId,
     });
   }
-  for (const playerId of submissionOrder) {
+  for (const playerId of submissionOrder.slice(0, 1)) {
     state = run(state, {
       type: "SUBMIT_DIAGNOSIS",
       playerId,
@@ -350,48 +350,61 @@ describe("round state machine", () => {
     expect(state.players["player.one"]?.hand.selectedCardInstanceId).toBeNull();
   });
 
-  it("keeps private clues private and puts public clues on the shared board", () => {
+  it("puts generic question answers only in each player's private pile", () => {
     let state = startAndDraw("visibility");
-    const privateCard = forceCard(
+    const questionCard = forceCard(
       state,
       "player.one",
-      "card.ask.pain-movement",
+      "card.the-pain-that-moved.belly-pain",
     );
-    const publicCard = forceCard(
+    const secondQuestion = forceCard(
       state,
       "player.two",
-      "card.check.temperature",
+      "card.the-pain-that-moved.fever",
     );
     state = run(state, {
       type: "SELECT_CARD",
       playerId: "player.one",
-      cardInstanceId: privateCard.instanceId,
+      cardInstanceId: questionCard.instanceId,
     });
     state = run(state, { type: "LOCK_CARD", playerId: "player.one" });
     state = run(state, {
       type: "SELECT_CARD",
       playerId: "player.two",
-      cardInstanceId: publicCard.instanceId,
+      cardInstanceId: secondQuestion.instanceId,
     });
     state = run(state, { type: "LOCK_CARD", playerId: "player.two" });
     state = run(state, { type: "RESOLVE_ROUND" });
     expect(state.players["player.one"]?.privateClues.map((clue) => clue.clueId))
-      .toContain("clue.pain-migrated-lower-right");
+      .toContain("clue.the-pain-that-moved.belly-pain");
     expect(state.players["player.two"]?.privateClues.map((clue) => clue.clueId))
-      .not.toContain("clue.pain-migrated-lower-right");
-    expect(state.publicClues.map((clue) => clue.clueId)).toContain(
-      "clue.temperature-38",
-    );
+      .not.toContain("clue.the-pain-that-moved.belly-pain");
+    expect(state.players["player.two"]?.privateClues.map((clue) => clue.clueId))
+      .toContain("clue.the-pain-that-moved.fever");
+    expect(state.publicClues).toEqual([]);
     expect(
       state.latestPlays.find((play) => play.playerId === "player.one")
         ?.publicClueIds,
     ).toEqual([]);
   });
 
-  it("credits every simultaneous contributor to the same new public clue", () => {
+  it("allows a player to unlock while another player is still choosing", () => {
+    let state = startAndDraw("unlock-before-reveal");
+    const card = state.players["player.one"]?.hand.cards[0];
+    if (card === undefined) throw new Error("Missing card.");
+    state = run(state, { type: "SELECT_CARD", playerId: "player.one", cardInstanceId: card.instanceId });
+    state = run(state, { type: "LOCK_CARD", playerId: "player.one" });
+    expect(state.players["player.one"]?.hand.locked).toBe(true);
+    expect(state.phase).toBe("card_selection");
+    state = run(state, { type: "UNLOCK_CARD", playerId: "player.one" });
+    expect(state.players["player.one"]?.hand.locked).toBe(false);
+    expect(state.players["player.one"]?.hand.selectedCardInstanceId).toBe(card.instanceId);
+  });
+
+  it("gives simultaneous players separate private copies of the same answer", () => {
     let state = startAndDraw("simultaneous-public-credit");
     for (const playerId of state.playerOrder) {
-      const card = forceCard(state, playerId, "card.check.temperature");
+      const card = forceCard(state, playerId, "card.the-pain-that-moved.cough");
       state = run(state, {
         type: "SELECT_CARD",
         playerId,
@@ -402,7 +415,10 @@ describe("round state machine", () => {
 
     state = run(state, { type: "RESOLVE_ROUND" });
 
-    expect(state.publicClues).toHaveLength(2);
+    expect(state.publicClues).toHaveLength(0);
+    for (const playerId of state.playerOrder) {
+      expect(state.players[playerId]?.privateClues.map((clue) => clue.clueId)).toContain("clue.the-pain-that-moved.cough");
+    }
     expect(
       state.playerOrder.map((playerId) =>
         state.players[playerId]?.plays[0]?.revealedNewClue,
@@ -479,8 +495,8 @@ describe("round state machine", () => {
   });
 });
 
-describe("diagnosis and scoring", () => {
-  it("blocks diagnosis before Round 2", () => {
+describe("diagnosis race", () => {
+  it("allows diagnosis in Round 1", () => {
     const state = diagnosisState(1);
     const result = transitionCardGame(content, state, {
       type: "SUBMIT_DIAGNOSIS",
@@ -488,11 +504,26 @@ describe("diagnosis and scoring", () => {
       conditionId: content.correctConditionId,
       clueIds: supportClues,
     });
-    expect(result.errors[0]?.code).toBe("DIAGNOSIS_LOCKED");
-    expect(isDiagnosisAvailable(state, "player.one")).toBe(false);
+    expect(result.errors).toEqual([]);
+    expect(result.state.phase).toBe("match_complete");
+    expect(isDiagnosisAvailable(state, "player.one")).toBe(true);
   });
 
-  it("requires a valid condition and two distinct known clues", () => {
+  it("removes the newest private answer after a wrong Round 1 guess", () => {
+    const state = diagnosisState(1);
+    const before = state.players["player.one"]?.privateClues.length;
+    const result = transitionCardGame(content, state, {
+      type: "SUBMIT_DIAGNOSIS",
+      playerId: "player.one",
+      conditionId: content.conditions[1]!.id,
+      clueIds: [],
+    });
+    expect(result.errors).toEqual([]);
+    expect(result.state.players["player.one"]?.privateClues).toHaveLength((before ?? 0) - 1);
+    expect(result.state.players["player.one"]?.diagnosisLockedUntilRound).toBe(2);
+  });
+
+  it("requires a valid condition but does not require clue selection", () => {
     const state = diagnosisState();
     const duplicate = transitionCardGame(content, state, {
       type: "SUBMIT_DIAGNOSIS",
@@ -500,14 +531,14 @@ describe("diagnosis and scoring", () => {
       conditionId: content.correctConditionId,
       clueIds: [supportClues[0], supportClues[0]],
     });
-    expect(duplicate.errors[0]?.code).toBe("INVALID_SUPPORTING_CLUES");
+    expect(duplicate.errors).toEqual([]);
     const unknown = transitionCardGame(content, state, {
       type: "SUBMIT_DIAGNOSIS",
       playerId: "player.one",
       conditionId: content.correctConditionId,
       clueIds: [supportClues[0], "clue.not-known"],
     });
-    expect(unknown.errors[0]?.code).toBe("INVALID_SUPPORTING_CLUES");
+    expect(unknown.errors).toEqual([]);
     const condition = transitionCardGame(content, state, {
       type: "SUBMIT_DIAGNOSIS",
       playerId: "player.one",
@@ -528,8 +559,8 @@ describe("diagnosis and scoring", () => {
     expect(state.players["player.one"]?.diagnosisAttemptsUsed).toBe(1);
     expect(
       state.eventLog.find((event) => event.type === "diagnosis_incorrect")?.payload
-        .penalty,
-    ).toBe(-150);
+        .removedClueId,
+    ).toBe(supportClues[1]);
     const blocked = transitionCardGame(content, state, {
       type: "SUBMIT_DIAGNOSIS",
       playerId: "player.one",
@@ -591,10 +622,10 @@ describe("diagnosis and scoring", () => {
       conditionId: content.correctConditionId,
       clueIds: supportClues,
     });
-    expect(repeated.errors[0]?.code).toBe("DIAGNOSIS_ALREADY_CORRECT");
+    expect(repeated.errors[0]?.code).toBe("INVALID_PHASE");
   });
 
-  it("awards the complete 1,000-point Round 2 score breakdown", () => {
+  it("finishes immediately without point scoring", () => {
     let state = diagnosisState();
     const opponent = state.players["player.two"];
     if (opponent === undefined) {
@@ -609,14 +640,15 @@ describe("diagnosis and scoring", () => {
     });
     const score = state.players["player.one"]?.score;
     expect(score).toMatchObject({
-      correctDiagnosis: 500,
-      supportingClues: 200,
-      timing: 150,
-      efficientInvestigation: 100,
-      achievement: 50,
+      correctDiagnosis: 0,
+      supportingClues: 0,
+      timing: 0,
+      efficientInvestigation: 0,
+      achievement: 0,
       wrongAttemptPenalty: 0,
-      total: 1_000,
+      total: 0,
     });
+    expect(state.result?.winnerPlayerIds).toEqual(["player.one"]);
   });
 
   it("subtracts wrong-attempt penalties and clamps efficiency and total", () => {
@@ -655,7 +687,7 @@ describe("diagnosis and scoring", () => {
       clueIds: supportClues,
     });
     const score = state.players["player.one"]?.score;
-    expect(score?.wrongAttemptPenalty).toBe(-150);
+    expect(score?.wrongAttemptPenalty).toBe(0);
     expect(score?.efficientInvestigation).toBe(0);
     expect(score?.total).toBeGreaterThanOrEqual(0);
     expect(score?.total).toBeLessThanOrEqual(1_000);
@@ -668,10 +700,10 @@ describe("diagnosis and scoring", () => {
     expect(first.result).toEqual(replay.result);
     expect(first.result?.rankings.map((entry) => entry.placement)).toEqual([1, 2]);
     expect(first.result?.winnerPlayerIds).toHaveLength(1);
-    expect(first.result?.winningTieBreak).toBe("seeded_mystery_draw");
+    expect(first.result?.winningTieBreak).toBe("correct_diagnosis");
   });
 
-  it("does not use submission or player order to resolve an exact tie", () => {
+  it("awards the win to the first correct submission", () => {
     const forward = completeExactTie("order-neutral", ["player.one", "player.two"]);
     const reversed = completeExactTie(
       "order-neutral",
@@ -679,13 +711,11 @@ describe("diagnosis and scoring", () => {
       [...twoHumans].reverse(),
     );
 
-    expect(reversed.result?.winnerPlayerIds).toEqual(forward.result?.winnerPlayerIds);
-    expect(reversed.result?.rankings.map((entry) => entry.playerId)).toEqual(
-      forward.result?.rankings.map((entry) => entry.playerId),
-    );
+    expect(forward.result?.winnerPlayerIds).toEqual(["player.one"]);
+    expect(reversed.result?.winnerPlayerIds).toEqual(["player.two"]);
   });
 
-  it("does not systematically favor either player across seeded exact ties", () => {
+  it("does not let the seed change who submitted correctly first", () => {
     const winners = new Set(
       Array.from({ length: 24 }, (_, index) =>
         completeExactTie(`fair-draw-${index}`, ["player.one", "player.two"])
@@ -693,7 +723,7 @@ describe("diagnosis and scoring", () => {
       ),
     );
 
-    expect(winners).toEqual(new Set(["player.one", "player.two"]));
+    expect(winners).toEqual(new Set(["player.one"]));
   });
 });
 
@@ -749,7 +779,7 @@ describe("balanced bot and player views", () => {
     ).toBe(second.players["player.bot-balanced"]?.hand.selectedCardInstanceId);
   });
 
-  it("waits until diagnosis is unlocked and submits only valid known clues", () => {
+  it("waits to diagnose while its private answers remain ambiguous", () => {
     const state = createCardMatch(content, { seed: "bot-diagnosis" });
     state.phase = "clue_review";
     state.currentRound = 1;
@@ -758,7 +788,7 @@ describe("balanced bot and player views", () => {
     next.phase = "clue_review";
     next.currentRound = 2;
     next.players["player.bot-balanced"]?.privateClues.push({
-      clueId: "clue.pain-migrated-lower-right",
+      clueId: supportClues[1],
       round: 2,
       sourceId: "bot-fixture",
       visibility: "private",
@@ -767,15 +797,7 @@ describe("balanced bot and player views", () => {
     next = run(next, { type: "OPEN_DIAGNOSIS_WINDOW" });
     expect(next.players["player.bot-balanced"]?.diagnosisSubmissions).toEqual([]);
     next = run(next, { type: "CONTINUE_FROM_DIAGNOSIS" });
-    const submission = next.players["player.bot-balanced"]
-      ?.diagnosisSubmissions[0];
-    expect(submission?.conditionId).toBe(content.correctConditionId);
-    expect(submission?.clueIds).toHaveLength(2);
-    expect(
-      submission?.clueIds.every((clueId) =>
-        knownClueIdsForPlayer(next, "player.bot-balanced").includes(clueId),
-      ),
-    ).toBe(true);
+    expect(next.players["player.bot-balanced"]?.diagnosisSubmissions).toEqual([]);
   });
 
   it("lets the human decide before the bot without awarding first-player priority", () => {
@@ -789,7 +811,7 @@ describe("balanced bot and player views", () => {
       const player = state.players[playerId];
       if (player === undefined) continue;
       player.privateClues.push({
-        clueId: "clue.pain-migrated-lower-right",
+        clueId: supportClues[1],
         round: 2,
         sourceId: "fixture",
         visibility: "private",
@@ -806,15 +828,15 @@ describe("balanced bot and player views", () => {
       clueIds: supportClues,
     });
 
-    expect(state.players["player.you"]?.score?.total).toBe(1_000);
-    expect(state.players["player.bot-balanced"]?.score?.total).toBe(1_000);
+    expect(state.players["player.you"]?.score?.total).toBe(0);
+    expect(state.players["player.bot-balanced"]?.score?.total).toBe(0);
     expect(state.result?.rankings.map((entry) => entry.placement)).toEqual([1, 2]);
     expect(state.result?.winnerPlayerIds).toHaveLength(1);
     const correctEvents = state.eventLog.filter(
       (event) => event.type === "diagnosis_correct",
     );
     expect(correctEvents[0]?.relatedIds).toContain("player.you");
-    expect(correctEvents[1]?.relatedIds).toContain("player.bot-balanced");
+    expect(correctEvents).toHaveLength(1);
   });
 
   it("does not expose opponent private clues or in-match scores in a player view", () => {

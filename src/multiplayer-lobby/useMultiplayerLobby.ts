@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { thePainThatMovedCardCase } from "../card-content";
-import { createCardMatch, type CardGameCommand } from "../card-game-engine";
+import { cardCaseRegistry, getCardCaseById, thePainThatMovedCardCase } from "../card-content";
+import { createCardMatch, createSeededRandomState, seededChoice, type CardGameCommand } from "../card-game-engine";
 import { applyCardMatchCommand, createCardMatchSession } from "../card-match-session";
 import { buildCardAppModel, type CardMatchController } from "../card-hooks/useCardMatch";
 import type { CardAppActions, CardAppModel, DiagnosisInput } from "../card-app/types";
@@ -173,13 +173,17 @@ export function useMultiplayerLobby(onExit?: () => void): MultiplayerLobbyContro
     createRoom: async (displayName, maximumPlayers) => run("create", async () => {
       const user = await ensureAnonymousPlayer();
       const roomCode = generateRoomCode();
+      const selectedCase = seededChoice(
+        cardCaseRegistry,
+        createSeededRandomState(`room-case:${roomCode}`),
+      )?.value ?? thePainThatMovedCardCase;
       const created = await repository().createRoom({
         roomId: roomCode,
         hostUid: user.uid,
         hostDisplayName: displayName,
         maximumPlayers,
-        caseId: thePainThatMovedCardCase.caseId,
-        contentVersion: thePainThatMovedCardCase.contentVersion,
+        caseId: selectedCase.caseId,
+        contentVersion: selectedCase.contentVersion,
         seed: `room-${roomCode}-${Date.now().toString(36)}`,
         now: Date.now(),
       });
@@ -210,7 +214,8 @@ export function useMultiplayerLobby(onExit?: () => void): MultiplayerLobbyContro
     }),
     startLobby: async () => run("start", async () => {
       if (!room || !uid) return;
-      const match = createCardMatch(thePainThatMovedCardCase, {
+      const roomContent = getCardCaseById(room.caseId) ?? thePainThatMovedCardCase;
+      const match = createCardMatch(roomContent, {
         seed: room.seed,
         matchId: `match.online.${room.roomId}`,
         players: room.memberUids.map((memberUid) => ({
@@ -326,6 +331,39 @@ export function useMultiplayerLobby(onExit?: () => void): MultiplayerLobbyContro
   }
 
   useEffect(() => {
+    const state = room?.session?.matchState;
+    if (!room?.session || !state || room.status !== "active" || !uid || !isOnline || busy) return;
+    const player = state.players[uid];
+    const shouldAcknowledge = state.phase === "card_reveal" && !state.acknowledgedRevealPlayerIds.includes(uid);
+    const shouldOpen = state.phase === "clue_review";
+    const shouldPass = state.phase === "diagnosis_window"
+      && state.currentRound < state.maximumRounds
+      && player !== undefined
+      && !player.finalDiagnosisSubmitted
+      && !player.diagnosisSubmissions.some((submission) => submission.round === state.currentRound)
+      && !(state.diagnosisPassedPlayerIds ?? []).includes(uid);
+    if (!shouldAcknowledge && !shouldOpen && !shouldPass) return;
+
+    void performMatch(async () => {
+      let next = room;
+      if (next.session?.matchState.phase === "card_reveal" && !next.session.matchState.acknowledgedRevealPlayerIds.includes(uid)) {
+        next = await sendCommand(next, { type: "ACKNOWLEDGE_REVEAL", playerId: uid });
+      }
+      if (next.session?.matchState.phase === "clue_review") {
+        next = await sendCommand(next, { type: "OPEN_DIAGNOSIS_WINDOW" });
+      }
+      if (next.session?.matchState.phase === "diagnosis_window" && next.session.matchState.currentRound < next.session.matchState.maximumRounds) {
+        const current = next.session.matchState.players[uid];
+        const decided = current?.finalDiagnosisSubmitted
+          || current?.diagnosisSubmissions.some((submission) => submission.round === next.session!.matchState.currentRound)
+          || (next.session.matchState.diagnosisPassedPlayerIds ?? []).includes(uid);
+        if (!decided) next = await sendCommand(next, { type: "PASS_DIAGNOSIS", playerId: uid });
+        await continueWhenReady(next);
+      }
+    });
+  }, [room?.revision, uid, isOnline, busy]);
+
+  useEffect(() => {
     if (!room?.session || room.status !== "active" || !uid || !isOnline || busy) return;
     const checkForDisconnectedPlayer = () => {
       if (Date.now() - presenceMonitoringStartedRef.current < PRESENCE_TIMEOUT_MS) return;
@@ -376,7 +414,13 @@ export function useMultiplayerLobby(onExit?: () => void): MultiplayerLobbyContro
           await sendCommand(room, { type: "USE_REDRAW", playerId: uid });
         }),
         lockCard: () => void performMatch(async () => {
-          await sendCommand(room, { type: "LOCK_CARD", playerId: uid });
+          let next = await sendCommand(room, { type: "LOCK_CARD", playerId: uid });
+          if (next.session?.matchState.phase === "cards_locked") {
+            next = await sendCommand(next, { type: "RESOLVE_ROUND" });
+          }
+        }),
+        unlockCard: () => void performMatch(async () => {
+          await sendCommand(room, { type: "UNLOCK_CARD", playerId: uid });
         }),
         revealCards: () => void performMatch(async () => {
           let next = room;
@@ -407,10 +451,9 @@ export function useMultiplayerLobby(onExit?: () => void): MultiplayerLobbyContro
           await continueWhenReady(submitted);
         }),
         playAgain: () => void performMatch(async () => {
-          if (room.hostUid === uid) await repository().closeRoom(room.roomId, uid);
-          else await repository().removePresence(room.roomId, uid).catch(() => undefined);
-          rememberRoomCode();
-          onExit?.();
+          const reset = await repository().resetRoom(room.roomId, uid);
+          setRoom(reset);
+          rememberRoomCode(reset.roomId);
         }),
       }
     : null;
@@ -450,7 +493,7 @@ export function useMultiplayerLobby(onExit?: () => void): MultiplayerLobbyContro
   const match = room?.session && uid && matchActions
     ? {
         model: addOnlineState(buildCardAppModel(
-          thePainThatMovedCardCase,
+          getCardCaseById(room.caseId) ?? thePainThatMovedCardCase,
           room.session.matchState.phase === "match_complete" ? "results" : "match",
           room.session,
           busy ? "Syncing with the room…" : "",
@@ -479,6 +522,7 @@ export function useMultiplayerLobby(onExit?: () => void): MultiplayerLobbyContro
       operation,
       ...(errorMessage ? { errorMessage } : {}),
       ...(room ? { roomCode: room.roomId } : {}),
+      ...(room ? { caseTitle: room.status === "lobby" ? "Random mystery" : "Current mystery" } : {}),
       maximumPlayers: room?.maximumPlayers ?? 4,
       isHost,
       currentPlayerReady: room?.members[uid]?.ready ?? false,

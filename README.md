@@ -2,7 +2,7 @@
 
 **Reveal. Deduce. Diagnose.**
 
-Meducktion is a beginner-friendly competitive medical deduction card game. Players investigate the same fictional patient, choose one Ask, Check, Test, or Special card each round, collect shared and private clues, and try to make the strongest correct diagnosis. Local play supports deterministic bots; private Firebase rooms support two to four human players.
+Meducktion is a beginner-friendly competitive medical deduction card game. Players investigate one of four fictional cases, choose one short Ask, Check, or Test question each round, privately sort its authored answer into a YES or NO pile, and try to make the strongest correct diagnosis. Local play supports deterministic bots; private Firebase rooms support two to four human players.
 
 > **Medical disclaimer:** Meducktion is a fictional educational game. It is not medical advice, clinical training, or a diagnostic tool. Do not use it to make decisions about real patients.
 
@@ -36,7 +36,7 @@ npm run test:multiplayer
 npm run test:firebase-rules
 ```
 
-The current Firebase CLI requires JDK 21 or newer for the Firestore emulator. Online play uses transactional commands with revision and idempotency checks. The match header keeps the room code and connection state visible, and gameplay controls pause while a command is syncing or the browser is offline. Active players write isolated Firestore heartbeats every 15 seconds; after a 90-second reconnect grace period, another room member transactionally replaces a stale human seat with the deterministic bot so the match can continue. A departing lobby host transfers ownership to the next player, an explicit active-match exit triggers immediate bot takeover, and the host removes a completed room when returning home. It remains an unranked client-authoritative MVP because room members can inspect shared Firestore snapshots.
+The current Firebase CLI requires JDK 21 or newer for the Firestore emulator. Online play uses transactional commands with revision and idempotency checks. The match header keeps the room code and connection state visible, and gameplay controls pause while a command is syncing or the browser is offline. Active players write isolated Firestore heartbeats every 15 seconds; after a 90-second reconnect grace period, another room member transactionally replaces a stale human seat with the deterministic bot so the match can continue. A departing lobby host transfers ownership to the next player, an explicit active-match exit triggers immediate bot takeover, and Play Again returns the completed room to the same lobby. It remains an unranked client-authoritative MVP because room members can inspect shared Firestore snapshots.
 
 The checked-in Firestore rules are deployed to the `meducktion` Firebase project. A disposable two-user production smoke test verifies anonymous authentication, room creation/join/readiness, match start, cross-client selection and locking, and host cleanup.
 
@@ -62,4 +62,4 @@ The stable `CASE_SIGNAL_*` filenames are intentionally retained to avoid breakin
 
 ## Release status
 
-The first case remains pending professional medical review. Meducktion is an official working title, not a cleared public name; trademark, domain, social-handle, app-store, and other platform availability must be reviewed before release.
+All four cases remain pending professional medical review and balance playtesting. Meducktion is an official working title, not a cleared public name; trademark, domain, social-handle, app-store, and other platform availability must be reviewed before release.

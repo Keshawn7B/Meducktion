@@ -13,6 +13,8 @@ import type {
   CardMatchStorageAdapter,
 } from "../card-match-session";
 import {
+  cardCaseRegistry,
+  getCardCaseById,
   thePainThatMovedCardCase,
 } from "../card-content";
 import type {
@@ -21,7 +23,9 @@ import type {
 } from "../card-content";
 import {
   createCardMatch,
+  createSeededRandomState,
   isDiagnosisAvailable,
+  seededChoice,
 } from "../card-game-engine";
 import type {
   CardGameCommand,
@@ -129,10 +133,10 @@ function statusForMatch(
         ? "Card selected. Change it or lock it in."
         : "Choose one investigation card for this round.";
     case "cards_locked":
-      return "Everyone is locked. Reveal the cards together.";
+      return "Everyone is locked. Revealing automatically…";
     case "card_reveal":
     case "clue_review":
-      return "New clues are ready to review.";
+      return "New YES and NO evidence is being placed on the table.";
     case "diagnosis_window":
       if ((state.diagnosisPassedPlayerIds ?? []).includes(player.id)) {
         return "Waiting for the other players to decide.";
@@ -143,9 +147,9 @@ function statusForMatch(
       ) {
         return "Your next diagnosis attempt unlocks next round.";
       }
-      return state.currentRound >= 2
-        ? "Diagnose now, or continue investigating."
-        : "Diagnosis unlocks after Round 2. Continue to the next round.";
+      return state.currentRound >= state.maximumRounds
+        ? "Make the required final diagnosis."
+        : "Diagnose now or continue to the next round.";
     case "next_round":
       return "The next round is ready.";
     case "match_complete":
@@ -211,6 +215,7 @@ export function buildCardAppModel(
       return {
         id: reveal.clueId,
         title: clue?.displayText ?? "Shared clue",
+        ...(clue ? { question: clue.question, answer: clue.answer } : {}),
         ...(clue?.expandedText ? { explanation: clue.expandedText } : {}),
         visibility: "public" as const,
         isNew: reveal.round === state.currentRound,
@@ -222,6 +227,7 @@ export function buildCardAppModel(
       return {
         id: reveal.clueId,
         title: clue?.displayText ?? "Private clue",
+        ...(clue ? { question: clue.question, answer: clue.answer } : {}),
         ...(clue?.expandedText ? { explanation: clue.expandedText } : {}),
         visibility: "private" as const,
         isNew: reveal.round === state?.currentRound,
@@ -287,8 +293,14 @@ export function buildCardAppModel(
     ...(saveNotice ? { legacySaveNotice: saveNotice } : {}),
     ...(errorMessage ? { errorMessage } : {}),
     setup: {
+      selectedCaseId: "random",
       suggestedPlayerName: human?.displayName ?? "Detective",
-      selectedCaseName: content.title,
+      selectedCaseName: "Random mystery",
+      availableCases: [{
+        id: "random",
+        title: "Random mystery",
+        patientName: "Revealed when the match starts",
+      }],
       opponentName: BOT_NAMES[0],
       opponentStyle: "Balanced",
       playerCount: 2,
@@ -314,6 +326,7 @@ export function buildCardAppModel(
       hand:
         human?.hand.cards.map((instance) => {
           const card = content.cards.find((candidate) => candidate.id === instance.cardId);
+          const selected = human.hand.selectedCardInstanceId === instance.instanceId;
           return {
             id: instance.instanceId,
             title: card?.displayName ?? "Investigation card",
@@ -321,8 +334,9 @@ export function buildCardAppModel(
             visibility: card?.visibility ?? "private",
             description: card?.description ?? "Reveal another part of the mystery.",
             ...(card?.beginnerHint ? { beginnerHint: card.beginnerHint } : {}),
-            selected: human.hand.selectedCardInstanceId === instance.instanceId,
+            selected,
             locked: human.hand.locked,
+            dimmed: human.hand.selectedCardInstanceId !== null && !selected,
             disabled:
               state?.phase !== "card_selection" ||
               human.correctDiagnosisRound !== null,
@@ -372,6 +386,14 @@ export function buildCardAppModel(
           const clue = reveal
             ? clueDefinition(content, reveal.clueId)
             : undefined;
+          const playedCard = content.cards.find((card) => card.id === play.cardId);
+          const effectText = playedCard?.result.type === "special"
+            ? playedCard.result.effect.type === "swap_one_card"
+              ? "Your least useful remaining card was traded for a new one."
+              : playedCard.result.effect.type === "draw_two_keep_one"
+                ? "Two cards were drawn and the stronger option was kept."
+                : playedCard.description
+            : undefined;
           return {
             playerId: play.playerId,
             playerName: owner?.displayName ?? "Player",
@@ -393,6 +415,7 @@ export function buildCardAppModel(
             clueIsHidden:
               play.playerId !== playerId &&
               play.visibility === "private",
+            ...(effectText ? { effectText } : {}),
           };
         }) ?? [],
       ...(sharedEvent
@@ -426,7 +449,12 @@ export function buildCardAppModel(
         ),
       canLock:
         state?.phase === "card_selection" &&
-        human?.correctDiagnosisRound === null,
+        human?.correctDiagnosisRound === null &&
+        !human.hand.locked,
+      canUnlock:
+        state?.phase === "card_selection" &&
+        human?.correctDiagnosisRound === null &&
+        human.hand.locked,
       canReveal:
         state?.phase === "cards_locked" ||
         (state?.phase === "card_reveal" &&
@@ -467,6 +495,9 @@ export function useCardMatch(): CardMatchController {
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [saveNotice, setSaveNotice] = useState(initialLoad.error?.message);
+  const activeContent = session
+    ? getCardCaseById(session.caseId) ?? thePainThatMovedCardCase
+    : thePainThatMovedCardCase;
 
   function commit(run: CommandRun): CardMatchSession {
     setSession(run.session);
@@ -480,6 +511,9 @@ export function useCardMatch(): CardMatchController {
 
   function startMatch(input: StartMatchInput) {
     const seed = createLocalSeed();
+    const selectedContent = input.caseId === "random"
+      ? seededChoice(cardCaseRegistry, createSeededRandomState(`case:${seed}`))?.value ?? thePainThatMovedCardCase
+      : getCardCaseById(input.caseId) ?? thePainThatMovedCardCase;
     const players = [
       {
         id: HUMAN_PLAYER_ID,
@@ -493,7 +527,7 @@ export function useCardMatch(): CardMatchController {
         botStyle: "balanced" as const,
       })),
     ];
-    const matchState = createCardMatch(thePainThatMovedCardCase, {
+    const matchState = createCardMatch(selectedContent, {
       seed,
       matchId: `match.local.${seed}`,
       players,
@@ -533,8 +567,8 @@ export function useCardMatch(): CardMatchController {
       setErrorMessage("");
       setMessage(
         latest.correct
-          ? "Diagnosis submitted. The final score will decide the winner."
-          : "That diagnosis was incorrect: −150 points. Your clues remain available.",
+          ? "Correct diagnosis. You won the match."
+          : "That diagnosis was incorrect. Your newest answer was removed, and you can try again next round.",
       );
     }
   }
@@ -569,8 +603,29 @@ export function useCardMatch(): CardMatchController {
     },
     useRedraw: () =>
       void withCurrent([{ type: "USE_REDRAW", playerId: HUMAN_PLAYER_ID }]),
-    lockCard: () =>
-      void withCurrent([{ type: "LOCK_CARD", playerId: HUMAN_PLAYER_ID }]),
+    lockCard: () => {
+      if (!session) return;
+      let run = runCommands(session, [{ type: "LOCK_CARD", playerId: HUMAN_PLAYER_ID }]);
+      if (!run.errorMessage && run.session.matchState.phase === "cards_locked") {
+        run = runCommands(run.session, [{ type: "RESOLVE_ROUND" }]);
+      }
+      if (!run.errorMessage && run.session.matchState.phase === "card_reveal") {
+        run = runCommands(run.session, [{ type: "ACKNOWLEDGE_REVEAL", playerId: HUMAN_PLAYER_ID }]);
+      }
+      if (!run.errorMessage && run.session.matchState.phase === "clue_review") {
+        run = runCommands(run.session, [{ type: "OPEN_DIAGNOSIS_WINDOW" }]);
+      }
+      if (!run.errorMessage && run.session.matchState.phase === "diagnosis_window" && run.session.matchState.currentRound < run.session.matchState.maximumRounds) {
+        run = runCommands(run.session, [{ type: "CONTINUE_FROM_DIAGNOSIS" }]);
+        if (!run.errorMessage && run.session.matchState.phase === "next_round") {
+          run = runCommands(run.session, [{ type: "ADVANCE_ROUND" }, { type: "DRAW_CARDS" }]);
+        }
+      }
+      const next = commit(run);
+      setScreen(screenForSession(next));
+    },
+    unlockCard: () =>
+      void withCurrent([{ type: "UNLOCK_CARD", playerId: HUMAN_PLAYER_ID }]),
     revealCards: () => {
       if (!session) return;
       let run = runCommands(session, [{ type: "RESOLVE_ROUND" }]);
@@ -606,7 +661,7 @@ export function useCardMatch(): CardMatchController {
 
   return {
     model: buildCardAppModel(
-      thePainThatMovedCardCase,
+      activeContent,
       screen,
       session,
       message,

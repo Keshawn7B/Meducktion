@@ -1,3 +1,3 @@
 export { FirestoreMultiplayerRoomRepository } from "./firestoreRepository";
-export { applyRoomCommand, createRoomRecord, generateRoomCode, joinRoomRecord, leaveRoomRecord, markRoomReadyToStart, MultiplayerRoomError, setMemberReady, startRoomRecord } from "./protocol";
+export { applyRoomCommand, createRoomRecord, generateRoomCode, joinRoomRecord, leaveRoomRecord, markRoomReadyToStart, MultiplayerRoomError, resetCompletedRoom, setMemberReady, startRoomRecord } from "./protocol";
 export type * from "./types";

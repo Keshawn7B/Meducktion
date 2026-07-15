@@ -1,10 +1,53 @@
-# Meducktion Hidden-Identity Casual Game Refactor
+# Meducktion Competitive Card Game Refactor
+
+## Current race rules and expanded case catalog
+
+Meducktion now uses a direct deduction race instead of point scoring. A player may diagnose during any card-selection or diagnosis window, including Round 1. The first correct diagnosis ends the match immediately and is the sole winner. Submission order matters only when a correct command is accepted; there is no score calculation or first-place tie. A wrong diagnosis removes that player's newest private answer, consumes one of two attempts, and blocks another guess until the next round.
+
+The authored draft catalog contains 25 fictional scenarios. Every scenario presents four plausible, deliberately overlapping possibilities and uses the same 24 generic symptom and homeostasis questions. Every question produces a private YES or NO answer. Each player deck contains exactly one copy of each question, so a player cannot draw a duplicate card during a match. The consistent vocabulary is intentional: players learn the deck while different combinations of answers create the deduction challenge.
+
+Players do not choose from or preview named scenarios. Local matches draw a case from the 25-case catalog using the match seed, and online rooms derive the same hidden draw from the room code so every client receives the identical case. The patient and mystery are revealed only after the match starts; authored case titles remain internal content metadata.
+
+The expanded profiles are marked `medicalReviewRequired`. Their symptom relationships, difficulty, ambiguity, answer balance, and bot behavior require structured playtesting and medical review before public release.
 
 **Status:** Current product and architecture direction
 
 **Tagline:** *Reveal. Deduce. Diagnose.*
 
 > **Medical disclaimer:** Meducktion is a fictional educational game. It is not medical advice, clinical training, or a diagnostic tool. Do not use it to make decisions about real patients.
+
+## July 2026 deduction-loop correction
+
+This section is the authoritative description of the currently mounted game. Older identity-mode and score-mode sections below are retained as historical design records where they conflict with this correction.
+
+The default mode is the shared-patient competitive card game. Two to four players investigate the same fictional case, choose one of three question cards, and reveal authored answers into their own private YES and NO evidence piles. Local play uses one deterministic bot; private online rooms use the same engine and session contract for human players.
+
+Locking remains reversible while another player is still choosing. When the final active player locks, the round reveals automatically, places each answer into its owner's private pile, and prepares the next hand. There is no separate Reveal, Review Clues, or Keep Investigating gate. A player may diagnose from Round 1 while choosing a card. The final round still requires a diagnosis when an attempt remains.
+
+Question cards use short, generic symptom and homeostasis checks such as `Fever?`, `Nausea?`, `Urine clear?`, `Blood sugar normal?`, and `Cough?`. Their case-specific YES or NO answer is fixed case content, never random medical truth. Ask, Check, and Test are presentation types only; the active decks contain no Special cards and no cards that directly reveal the diagnosis.
+
+Twenty-five fictional deduction cases are currently registered. They share a 24-question vocabulary but use different overlapping answer profiles and four-condition sets. All case content remains blocked on professional medical review and balance playtesting before public release.
+
+### Card and table polish
+
+- Each player's results appear in separate private YES and NO piles with the original question and authored answer.
+- Question cards use a large text-first face with no illustration or visibility label, keeping the question readable at desktop and mobile sizes.
+- Card copy stays inside the portrait face because only the short question and YES/NO outcome preview are shown.
+- Selecting a card visually mutes the other two without disabling them, so the player can still change their choice before locking.
+- Opponent answers remain hidden; only the played question type and the fact that an answer was received are shown.
+- Local setup exposes the full case registry. An online room pins one registered case deterministically when created.
+- Online `Play Again` resets the completed match to the same lobby instead of deleting the room or returning home.
+
+### Remaining playtest observations
+
+- The three new draft cases need professional medical review, copy editing, and repeated balance testing.
+- The YES/NO information curve needs multiplayer playtesting to confirm that neither fast diagnosis nor repeated Test draws dominate.
+- Unlock is available only before the final player locks; the final lock intentionally starts the automatic reveal.
+- Online play remains a trusted-room, client-authoritative MVP rather than a cheat-resistant ranked system.
+
+### Future ideas not implemented
+
+No Firebase authority service, matchmaking, ranked mode, new medical subsystem, complex randomness system, or additional card category was added in this correction.
 
 ## Current default mode
 
@@ -51,11 +94,11 @@ It should not feel like a medical-school examination, hospital simulator, electr
 ## The one-minute rules
 
 1. Every player investigates the same fictional patient and receives three cards.
-2. Choose one Ask, Check, Test, or Special card, then lock it.
-3. After everyone locks, reveal the cards and collect public or private clues.
-4. From Round 2 onward, diagnose by choosing one of four conditions and two known clues.
-5. A wrong diagnosis costs 150 points but does not eliminate the player.
-6. Play up to four rounds. The highest final score wins.
+2. Choose one Ask, Check, or Test question, then lock it.
+3. After everyone locks, reveal the cards and privately sort each answer into YES or NO.
+4. Diagnose whenever you are ready by choosing one of four conditions.
+5. A wrong diagnosis removes your newest answer and uses one of two attempts.
+6. The first correct diagnosis wins immediately.
 
 The canonical loop is:
 
@@ -68,29 +111,28 @@ Meet the patient
 → diagnose or continue
 → draw back to three cards
 → repeat for up to four rounds
-→ compare scores
+→ first correct diagnosis wins
 ```
 
-MVP defaults are 2–4 player-compatible rules, one human versus one Balanced bot for local testing, four rounds, a three-card hand, one card per player per round, diagnosis after Round 2, no strict timer, and no more than two diagnosis attempts. The target match length is 6–10 minutes.
+Current defaults are 2–4 player-compatible rules, one human versus one Balanced bot for local testing, four rounds, a three-card hand, one card per player per round, diagnosis from Round 1, no strict timer, and no more than two diagnosis attempts. The target match length is 6–10 minutes.
 
 ## Card categories
 
-Only four categories are active:
+Three question categories are active:
 
 | Category | Purpose | Presentation |
 |---|---|---|
 | Ask | Reveals history, symptoms, or the patient's account | Warm yellow/orange with category text and icon |
 | Check | Reveals a simple examination or observation | Teal with category text and icon |
 | Test | Reveals a stronger objective clue immediately | Blue/purple with category text and icon |
-| Special | Adds limited card-game variety, such as drawing, swapping, repeating, or sharing | Pink/gold with category text and icon |
 
-Cards are authored data, not React conditionals. Each definition has a stable ID, name, category, short description, icon key, case compatibility, clue or effect, visibility, and duplicate policy. Rarity and a beginner hint are optional. Test cards are less common than Ask and Check cards, and the MVP has no more than five Special effects.
+Cards are authored data, not React conditionals. Each active definition has a stable ID, short symptom or homeostasis question, Ask/Check/Test category, case compatibility, one authored YES/NO clue, private visibility, and duplicate policy. Test cards are less common than Ask and Check cards. Special-card effect types remain historical engine capability but are absent from active case decks.
 
-Every opening hand contains at least one Ask, one Check, and one Test or Special card. Each player gets one full-hand redraw. A simple deterministic protection rule favors a useful compatible card after two rounds without a meaningful undiscovered clue.
+Every opening hand contains at least one Ask, one Check, and one Test card. Each player gets one full-hand redraw. A simple deterministic protection rule favors a useful compatible card after two rounds without a meaningful undiscovered answer.
 
 ## Public and private information
 
-Everyone sees the patient introduction, four possible conditions, round, shared event, public clue board, opponents' played card categories, and whether an opponent diagnosed. A player alone sees their hand, private clues, diagnosis choices, submission, and unused redraw. Opponent scores and private investigation paths are revealed only in the recap.
+Everyone sees the patient introduction, four possible conditions, round, table event, opponents' played card categories, and whether an opponent diagnosed. A player alone sees their hand, private YES/NO piles, diagnosis choices, submission, and unused redraw. The active cases produce no shared clues. Opponent answers and investigation paths remain hidden until the recap.
 
 Cards may explicitly share a clue. The MVP does not allow unrestricted player-written clues, free-form medical reasoning, or bluffing about authored clue text.
 
@@ -122,25 +164,13 @@ match_intro
 → match_complete
 ```
 
-Selection may change before locking and never reveals a clue. All active players must lock before resolution. Reveal applies card effects, places clues according to visibility, resolves the one shared event at its authored round, and draws active hands back to three. A player who diagnosed correctly remains present as a spectator. A player who used both attempts without solving the case keeps playing cards for discovery points, but cannot diagnose again.
+Selection may change before locking and never reveals an answer. All active players must lock before resolution. Reveal places a private YES or NO answer for each played question and draws active hands back to three. A player who uses both attempts without solving the case may keep investigating but cannot diagnose again.
 
-The match ends when all players have diagnosed correctly or exhausted their attempts, or after every eligible player has made the required Round 4 final call. Completion reveals correctness, private clues, investigation paths, scores, ranking, winner feedback, and a beginner-friendly educational explanation.
+The match ends immediately when the first correct diagnosis command is accepted. If nobody solves it by the final required calls, the case ends without a winner. Completion reveals the authored answer, investigation paths, winner feedback, and a beginner-friendly educational explanation.
 
-## Diagnosis and scoring
+## Diagnosis and victory
 
-A diagnosis submission contains one of the four match conditions and two distinct clues known to that player, whether private or public. Diagnosis is unavailable before Round 2. A correct player cannot resubmit. The first wrong attempt subtracts 150 points and blocks another attempt until the next round; the second wrong attempt subtracts another 150 points and exhausts attempts. Players may keep revealing cards for partial points and are never eliminated.
-
-The maximum score is 1,000:
-
-| Category | Maximum | Rule |
-|---|---:|---|
-| Correct diagnosis | 500 | 500 for correct; otherwise 0 |
-| Supporting clues | 200 | 100 for each selected clue that legitimately supports the correct diagnosis |
-| Timing | 150 | 150 after Round 2, 100 after Round 3, 50 after Round 4 |
-| Efficient investigation | 100 | Starts at 100; repeated no-new-clue or clearly irrelevant investigations subtract 20 each |
-| Special achievement | 50 | At most one authored achievement |
-
-Wrong-attempt penalties apply after category scoring, and the result is clamped to 0–1,000. Ranking compares correct diagnosis, total score, evidence score, earlier correct round, fewer wrong attempts, and more unique discoveries, in that order. If every skill-based measure is still identical, a deterministic mystery draw derived from the match seed chooses the unique first-place player. Submission order and player order never break the tie, so going first gives no ranking advantage. The result records and displays the criterion that actually decided first place.
+A diagnosis submission contains one of the four match conditions. It is available whenever the player is choosing a card or the diagnosis window is open. The first correct submission ends the match and names exactly one winner. A wrong attempt removes the player's newest private answer, blocks another attempt until the next round, and the second wrong attempt exhausts diagnosis attempts. There are no points or score-based tie breakers.
 
 ## Local bot behavior
 
@@ -160,9 +190,9 @@ The bot is a transparent test opponent, not a simulation of medical expertise or
 
 The visual tone is roughly 40% playful, 30% cozy, 20% mysterious, and 10% medical. The app uses a prominent illustrated patient, a cozy stylized clinic setting, large colorful cards, rounded condition tiles, friendly icons, soft gradients, gentle shadows, visible round progress, satisfying clue reveals, and restrained winner celebration.
 
-Ask, Check, Test, and Special cards always include category text and icons, so color is supplementary. The interface avoids dense dashboards, realistic hospital software, tiny clinical labels, graphic anatomy, harsh alarm styling, tables of developer data, and walls of text.
+Ask, Check, and Test cards include category text and icons, so color is supplementary. Their faces prioritize one large question plus a YES/NO outcome preview and omit decorative artwork. The interface avoids dense dashboards, realistic hospital software, tiny clinical labels, graphic anatomy, harsh alarm styling, tables of developer data, and walls of text.
 
-The responsive experience keeps the patient, conditions, shared clues, opponent state, hand, and primary action understandable at mobile, tablet, and desktop widths. Card choice, diagnosis, and tutorial controls are keyboard accessible; selected and locked states are textual; reveals/errors use live announcements; reduced motion is supported; and no interaction requires drag-and-drop.
+The responsive experience keeps the patient, conditions, private evidence piles, opponent state, hand, and primary action understandable at mobile, tablet, and desktop widths. Card choice, diagnosis, and tutorial controls are keyboard accessible; selected and locked states are textual; reveals/errors use live announcements; reduced motion is supported; and no interaction requires drag-and-drop.
 
 ## Active architecture and legacy engine
 
@@ -226,7 +256,7 @@ No new game rules, cards, modes, medical systems, or gameplay randomness were ad
 
 The first safe v2 rules slice addresses fairness and match completion without replacing the current card loop:
 
-- Cards resolve as a simultaneous round for discovery credit. If multiple players reveal the same previously hidden public clue in that round, every contributor receives credit while the shared board stores the clue once.
+- Cards resolve as a simultaneous round. Each player receives their own private copy of the authored YES/NO answer, even when opponents chose the same question.
 - Using the second diagnosis attempt no longer removes a player from card play. They continue investigating for discovery points.
 - An eligible player cannot skip the Round 4 final diagnosis. The interface directs them to make their call before completion.
 - First place is always unique. The engine records the actual ranking criterion, and the results screen explains it.

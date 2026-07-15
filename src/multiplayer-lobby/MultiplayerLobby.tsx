@@ -139,7 +139,7 @@ export function MultiplayerLobby({ model, actions, onExit }: MultiplayerLobbyPro
             </div>
             <div className="lobby-table-card">
               <div>
-                <p className="playful-kicker">The Pain That Moved</p>
+                <p className="playful-kicker">{model.caseTitle ?? "Medical mystery"}</p>
                 <h1 id="lobby-title">Players in this room</h1>
                 <p>{model.members.length} of {model.maximumPlayers} seats filled</p>
               </div>

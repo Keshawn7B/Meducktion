@@ -87,6 +87,14 @@ function assertContent(content: CardCaseContent): void {
     throw new Error("The correct condition is missing from the case.");
   }
   const clueIds = new Set(content.clues.map((clue) => clue.id));
+  for (const clue of content.clues) {
+    if (clue.question.trim().length === 0) {
+      throw new Error(`Clue ${clue.id} must include a YES or NO question.`);
+    }
+    if (clue.answer !== "yes" && clue.answer !== "no") {
+      throw new Error(`Clue ${clue.id} must have a YES or NO answer.`);
+    }
+  }
   for (const variant of content.variants) {
     if (!clueIds.has(variant.startingClueId)) {
       throw new Error(`Variant ${variant.id} references an unknown starting clue.`);
@@ -236,12 +244,15 @@ export function createCardMatch(
     playerStates[player.id] = makePlayer(player, deck.cards);
   }
 
-  const initialPublicClue: PublicClue = {
-    clueId: variant.startingClueId,
-    round: 0,
-    sourceId: variant.id,
-    visibility: "public",
-  };
+  for (const player of Object.values(playerStates)) {
+    player.privateClues.push({
+      clueId: variant.startingClueId,
+      round: 0,
+      sourceId: variant.id,
+      visibility: "private",
+      playerId: player.id,
+    });
+  }
   const seed = String(options.seed);
   const matchId = options.matchId ?? `match.${content.caseId}.${rng.state.toString(16)}`;
   const state: MatchState = {
@@ -258,7 +269,7 @@ export function createCardMatch(
     maximumRounds: 4,
     playerOrder: players.map((player) => player.id),
     players: playerStates,
-    publicClues: [initialPublicClue],
+    publicClues: [],
     sharedEvent: {
       eventId: selectedEvent.value.id,
       round: eventRoundChoice.value,
@@ -850,12 +861,6 @@ function validateDiagnosis(
   conditionId: string,
   clueIds: readonly string[],
 ): CardGameError | null {
-  if (state.currentRound < 2) {
-    return {
-      code: "DIAGNOSIS_LOCKED",
-      message: "Diagnosis unlocks after Round 2.",
-    };
-  }
   if (
     player.diagnosisLockedUntilRound !== null &&
     state.currentRound < player.diagnosisLockedUntilRound
@@ -884,21 +889,6 @@ function validateDiagnosis(
       relatedId: conditionId,
     };
   }
-  if (clueIds.length !== 2 || new Set(clueIds).size !== 2) {
-    return {
-      code: "INVALID_SUPPORTING_CLUES",
-      message: "Select exactly two different revealed clues.",
-    };
-  }
-  const known = playerKnownClueIds(state, player);
-  const unknown = clueIds.find((clueId) => !known.has(clueId));
-  if (unknown !== undefined) {
-    return {
-      code: "INVALID_SUPPORTING_CLUES",
-      message: "Only clues revealed to you or the room may be selected.",
-      relatedId: unknown,
-    };
-  }
   return null;
 }
 
@@ -908,7 +898,7 @@ function submitDiagnosis(
   events: MatchEvent[],
   player: PlayerState,
   conditionId: string,
-  clueIds: [string, string],
+  clueIds: readonly string[],
 ): CardGameError | null {
   const validation = validateDiagnosis(
     content,
@@ -923,7 +913,7 @@ function submitDiagnosis(
   const correct = conditionId === content.correctConditionId;
   const submission: DiagnosisSubmission = {
     conditionId,
-    clueIds,
+    clueIds: [...clueIds],
     round: state.currentRound,
     correct,
   };
@@ -938,10 +928,16 @@ function submitDiagnosis(
     player.diagnosisLockedUntilRound = null;
     emit(state, events, "diagnosis_correct", [player.id]);
   } else {
+    const removedClue = player.privateClues.at(-1);
+    if (removedClue !== undefined) {
+      player.privateClues = player.privateClues.filter(
+        (clue) => clue !== removedClue,
+      );
+    }
     player.diagnosisLockedUntilRound = state.currentRound + 1;
     player.finalDiagnosisSubmitted = player.diagnosisAttemptsUsed >= 2;
     emit(state, events, "diagnosis_incorrect", [player.id], {
-      penalty: -150,
+      removedClueId: removedClue?.clueId ?? null,
     });
   }
   return null;
@@ -1006,191 +1002,58 @@ function autoDiagnoseBots(
         candidate.conditionId,
         candidate.clueIds,
       );
+      if (player.correctDiagnosisRound !== null) return;
     }
   }
-}
-
-function calculatePlayerScore(
-  content: CardCaseContent,
-  state: MatchState,
-  player: PlayerState,
-): PlayerScore {
-  const correctSubmission = player.diagnosisSubmissions.find(
-    (submission) => submission.correct,
-  );
-  const correctDiagnosis = correctSubmission === undefined ? 0 : 500;
-  const validSupportingClues =
-    correctSubmission?.clueIds.filter((clueId) =>
-      clueById(content, clueId)?.supportsConditionIds.includes(
-        content.correctConditionId,
-      ),
-    ).length ?? 0;
-  const supportingClues = Math.min(200, validSupportingClues * 100);
-  const timing =
-    correctSubmission?.round === 2
-      ? 150
-      : correctSubmission?.round === 3
-        ? 100
-        : correctSubmission?.round === 4
-          ? 50
-          : 0;
-  let efficiencyDeductions = 0;
-  for (const play of player.plays) {
-    const card = cardById(content, play.cardId);
-    if (card === undefined) {
-      continue;
-    }
-    if (card.category !== "special" && !play.revealedNewClue) {
-      efficiencyDeductions += 20;
-    }
-    if (card.caseValue === "irrelevant") {
-      efficiencyDeductions += 20;
-    }
-  }
-  const efficientInvestigation = Math.max(0, 100 - efficiencyDeductions);
-  const known = playerKnownClueIds(state, player);
-  let achievementId: string | null = null;
-  if (correctSubmission?.round === 2) {
-    achievementId = "achievement.bold-call";
-  } else if (
-    correctSubmission !== undefined &&
-    player.diagnosisSubmissions.every((submission) => submission.correct)
-  ) {
-    achievementId = "achievement.sharp-detective";
-  } else if (
-    correctSubmission !== undefined &&
-    player.plays.length > 0 &&
-    player.plays
-      .filter((play) => play.category !== "special")
-      .every((play) => play.revealedNewClue)
-  ) {
-    achievementId = "achievement.focused-search";
-  } else if (
-    content.clueCollectorSet.every((clueId) => known.has(clueId))
-  ) {
-    achievementId = "achievement.clue-collector";
-  }
-  const achievement = achievementId === null ? 0 : 50;
-  const wrongAttempts = player.diagnosisSubmissions.filter(
-    (submission) => !submission.correct,
-  ).length;
-  const wrongAttemptPenalty = wrongAttempts === 0 ? 0 : wrongAttempts * -150;
-  const total = Math.max(
-    0,
-    Math.min(
-      1_000,
-      correctDiagnosis +
-        supportingClues +
-        timing +
-        efficientInvestigation +
-        achievement +
-        wrongAttemptPenalty,
-    ),
-  );
-  return {
-    playerId: player.id,
-    correctDiagnosis,
-    supportingClues,
-    timing,
-    efficientInvestigation,
-    achievement,
-    achievementId,
-    wrongAttemptPenalty,
-    total,
-  };
 }
 
 function finishMatch(
   content: CardCaseContent,
   state: MatchState,
   events: MatchEvent[],
+  winnerPlayerId: string | null = null,
 ): void {
+  const emptyScore = (playerId: string): PlayerScore => ({
+    playerId,
+    correctDiagnosis: 0,
+    supportingClues: 0,
+    timing: 0,
+    efficientInvestigation: 0,
+    achievement: 0,
+    achievementId: null,
+    wrongAttemptPenalty: 0,
+    total: 0,
+  });
   for (const playerId of state.playerOrder) {
     const player = state.players[playerId];
     if (player !== undefined) {
-      player.score = calculatePlayerScore(content, state, player);
+      player.score = emptyScore(playerId);
     }
   }
-  const rankingTieOrder = seededShuffle(
-    [...state.playerOrder].sort((left, right) => left.localeCompare(right)),
-    createSeededRandomState(`${state.seed}:${state.matchId}:ranking-tie`),
-  ).values;
-  const comparePlayers = (
-    left: PlayerState,
-    right: PlayerState,
-  ): { order: number; reason: MatchResult["winningTieBreak"] } => {
-    const correctDifference =
-      Number(right.correctDiagnosisRound !== null) -
-      Number(left.correctDiagnosisRound !== null);
-    if (correctDifference !== 0) {
-      return { order: correctDifference, reason: "correct_diagnosis" };
-    }
-    const scoreDifference =
-      (right.score?.total ?? 0) - (left.score?.total ?? 0);
-    if (scoreDifference !== 0) {
-      return { order: scoreDifference, reason: "total_score" };
-    }
-    const evidenceDifference =
-      (right.score?.supportingClues ?? 0) -
-      (left.score?.supportingClues ?? 0);
-    if (evidenceDifference !== 0) {
-      return { order: evidenceDifference, reason: "evidence_score" };
-    }
-    const leftRound = left.correctDiagnosisRound ?? Number.POSITIVE_INFINITY;
-    const rightRound = right.correctDiagnosisRound ?? Number.POSITIVE_INFINITY;
-    if (leftRound !== rightRound) {
-      return { order: leftRound - rightRound, reason: "earlier_correct_round" };
-    }
-    const wrongDifference =
-      left.diagnosisSubmissions.filter((submission) => !submission.correct)
-        .length -
-      right.diagnosisSubmissions.filter((submission) => !submission.correct)
-        .length;
-    if (wrongDifference !== 0) {
-      return { order: wrongDifference, reason: "fewer_wrong_diagnoses" };
-    }
-    const discoveryDifference =
-      right.plays.filter((play) => play.revealedNewClue).length -
-      left.plays.filter((play) => play.revealedNewClue).length;
-    if (discoveryDifference !== 0) {
-      return {
-        order: discoveryDifference,
-        reason: "more_unique_discoveries",
-      };
-    }
-    return {
-      order:
-        rankingTieOrder.indexOf(left.id) - rankingTieOrder.indexOf(right.id),
-      reason: "seeded_mystery_draw",
-    };
-  };
-  const ranked = state.playerOrder
-    .map((playerId) => state.players[playerId])
-    .filter(
-      (player): player is PlayerState =>
-        player !== undefined && player.score !== null,
-    )
-    .sort((left, right) => comparePlayers(left, right).order);
-  const rankings: MatchResult["rankings"] = ranked.map((player, index) => ({
-    playerId: player.id,
+  const rankedPlayerIds = winnerPlayerId === null
+    ? [...state.playerOrder]
+    : [winnerPlayerId, ...state.playerOrder.filter((id) => id !== winnerPlayerId)];
+  const rankings: MatchResult["rankings"] = rankedPlayerIds.map((playerId, index) => ({
+    playerId,
     placement: index + 1,
-    score: player.score!,
+    score: state.players[playerId]?.score ?? emptyScore(playerId),
   }));
   state.result = {
     rankings,
-    winnerPlayerIds: rankings
-      .filter((entry) => entry.placement === 1)
-      .map((entry) => entry.playerId),
+    winnerPlayerIds: winnerPlayerId === null ? [] : [winnerPlayerId],
     correctConditionId: content.correctConditionId,
-    winningTieBreak:
-      ranked[0] === undefined || ranked[1] === undefined
-        ? "only_player"
-        : comparePlayers(ranked[0], ranked[1]).reason,
+    winningTieBreak: winnerPlayerId === null ? "only_player" : "correct_diagnosis",
   };
   state.phase = "match_complete";
   emit(state, events, "match_completed", state.result.winnerPlayerIds, {
     playerCount: state.playerOrder.length,
   });
+}
+
+function firstCorrectPlayerId(state: MatchState): string | null {
+  return state.playerOrder.find(
+    (playerId) => state.players[playerId]?.correctDiagnosisRound !== null,
+  ) ?? null;
 }
 
 export function transitionCardGame(
@@ -1234,7 +1097,6 @@ export function transitionCardGame(
       player.hand.selectedCardInstanceId = null;
       player.hand.locked = false;
     }
-    state.latestPlays = [];
     state.acknowledgedRevealPlayerIds = [];
     state.phase = "card_selection";
     emit(state, events, "cards_dealt", [], { handSize: 3 });
@@ -1338,6 +1200,22 @@ export function transitionCardGame(
     return complete(original, state, events);
   }
 
+  if (command.type === "UNLOCK_CARD") {
+    if (state.phase !== "card_selection") {
+      return fail(original, "INVALID_PHASE", "Cards can only be unlocked while players are still choosing.");
+    }
+    const player = state.players[command.playerId];
+    if (player === undefined) {
+      return fail(original, "UNKNOWN_PLAYER", "Unknown player.", command.playerId);
+    }
+    if (!player.hand.locked) {
+      return fail(original, "INVALID_COMMAND", "This card is not locked.");
+    }
+    player.hand.locked = false;
+    emit(state, events, "card_unlocked", [player.id]);
+    return complete(original, state, events);
+  }
+
   if (command.type === "RESOLVE_ROUND") {
     if (state.phase !== "cards_locked") {
       return fail(original, "CARDS_NOT_LOCKED", "All active players must lock first.");
@@ -1426,7 +1304,7 @@ export function transitionCardGame(
     state.phase = "diagnosis_window";
     state.diagnosisPassedPlayerIds = [];
     emit(state, events, "diagnosis_window_opened", [], {
-      unlocked: state.currentRound >= 2,
+      unlocked: true,
     });
     return complete(original, state, events);
   }
@@ -1459,6 +1337,11 @@ export function transitionCardGame(
       }
     } else if (state.phase === "diagnosis_window") {
       autoDiagnoseBots(content, state, events);
+      const winnerPlayerId = firstCorrectPlayerId(state);
+      if (winnerPlayerId !== null) {
+        finishMatch(content, state, events, winnerPlayerId);
+        return complete(original, state, events);
+      }
       const decided =
         player.finalDiagnosisSubmitted ||
         player.diagnosisSubmissions.some((submission) => submission.round === state.currentRound);
@@ -1503,8 +1386,8 @@ export function transitionCardGame(
   }
 
   if (command.type === "SUBMIT_DIAGNOSIS") {
-    if (state.phase !== "diagnosis_window") {
-      return fail(original, "INVALID_PHASE", "Diagnosis is not open now.");
+    if (state.phase !== "diagnosis_window" && state.phase !== "card_selection") {
+      return fail(original, "INVALID_PHASE", "Diagnosis is only available while choosing cards or after the final reveal.");
     }
     const player = state.players[command.playerId];
     if (player === undefined) {
@@ -1521,8 +1404,17 @@ export function transitionCardGame(
     if (error !== null) {
       return { state: original, events: [], errors: [error] };
     }
+    if (player.correctDiagnosisRound !== null) {
+      finishMatch(content, state, events, player.id);
+      return complete(original, state, events);
+    }
     if (player.kind === "human") {
       autoDiagnoseBots(content, state, events);
+    }
+    const winnerPlayerId = firstCorrectPlayerId(state);
+    if (winnerPlayerId !== null) {
+      finishMatch(content, state, events, winnerPlayerId);
+      return complete(original, state, events);
     }
     if (state.playerOrder.every((id) => state.players[id]?.finalDiagnosisSubmitted)) {
       finishMatch(content, state, events);
@@ -1557,6 +1449,11 @@ export function transitionCardGame(
       );
     }
     autoDiagnoseBots(content, state, events);
+    const winnerPlayerId = firstCorrectPlayerId(state);
+    if (winnerPlayerId !== null) {
+      finishMatch(content, state, events, winnerPlayerId);
+      return complete(original, state, events);
+    }
     if (
       state.currentRound >= state.maximumRounds ||
       state.playerOrder.every((id) => state.players[id]?.finalDiagnosisSubmitted)
@@ -1610,8 +1507,7 @@ export function isDiagnosisAvailable(
 ): boolean {
   const player = state.players[playerId];
   return (
-    state.phase === "diagnosis_window" &&
-    state.currentRound >= 2 &&
+    (state.phase === "diagnosis_window" || state.phase === "card_selection") &&
     player !== undefined &&
     !player.finalDiagnosisSubmitted &&
     player.diagnosisAttemptsUsed < 2 &&

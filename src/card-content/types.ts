@@ -36,6 +36,8 @@ export interface InvestigationCard {
 
 export interface CardClueDefinition {
   id: string;
+  question: string;
+  answer: "yes" | "no";
   displayText: string;
   expandedText: string;
   supportsConditionIds: string[];

@@ -5,7 +5,7 @@ import { deleteDoc, doc, getDoc, serverTimestamp, setDoc, Timestamp, type Firest
 import { thePainThatMovedCardCase } from "../card-content";
 import { createCardMatch } from "../card-game-engine";
 import { createCardMatchSession } from "../card-match-session";
-import { applyRoomCommand, createRoomRecord, joinRoomRecord, leaveRoomRecord, markRoomReadyToStart, setMemberReady, startRoomRecord } from "./protocol";
+import { applyRoomCommand, createRoomRecord, joinRoomRecord, leaveRoomRecord, markRoomReadyToStart, resetCompletedRoom, setMemberReady, startRoomRecord } from "./protocol";
 import { FirestoreMultiplayerRoomRepository } from "./firestoreRepository";
 
 let environment: RulesTestEnvironment;
@@ -129,5 +129,22 @@ describe("Firestore multiplayer room rules", () => {
     }, 4_000);
     await assertSucceeds(setDoc(doc(environment.authenticatedContext("guest").firestore(), "rooms", room.roomId), advanced));
     await assertFails(setDoc(doc(environment.authenticatedContext("outsider").firestore(), "rooms", room.roomId), advanced));
+  });
+
+  it("allows members to return a completed match to its unchanged lobby", async () => {
+    const joined = setMemberReady(joinRoomRecord(room, "guest", "Guest", 2_000), "guest", true);
+    const complete = {
+      ...joined,
+      status: "complete" as const,
+      session: createCardMatchSession(createCardMatch(thePainThatMovedCardCase, { seed: joined.seed }), room.roomId),
+    };
+    await environment.withSecurityRulesDisabled(async (context) => setDoc(doc(context.firestore(), "rooms", room.roomId), complete));
+    const reset = resetCompletedRoom(complete, "guest", 5_000);
+    await assertSucceeds(setDoc(doc(environment.authenticatedContext("guest").firestore(), "rooms", room.roomId), reset));
+    await assertFails(setDoc(doc(environment.authenticatedContext("outsider").firestore(), "rooms", room.roomId), reset));
+    await assertFails(setDoc(doc(environment.authenticatedContext("guest").firestore(), "rooms", room.roomId), {
+      ...reset,
+      members: { ...reset.members, host: { ...reset.members.host!, displayName: "Changed" } },
+    }));
   });
 });
