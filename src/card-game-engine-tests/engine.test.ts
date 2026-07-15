@@ -360,7 +360,7 @@ describe("round state machine", () => {
     const secondQuestion = forceCard(
       state,
       "player.two",
-      "card.the-pain-that-moved.fever",
+      "card.the-pain-that-moved.rash",
     );
     state = run(state, {
       type: "SELECT_CARD",
@@ -380,7 +380,7 @@ describe("round state machine", () => {
     expect(state.players["player.two"]?.privateClues.map((clue) => clue.clueId))
       .not.toContain("clue.the-pain-that-moved.belly-pain");
     expect(state.players["player.two"]?.privateClues.map((clue) => clue.clueId))
-      .toContain("clue.the-pain-that-moved.fever");
+      .toContain("clue.the-pain-that-moved.rash");
     expect(state.publicClues).toEqual([]);
     expect(
       state.latestPlays.find((play) => play.playerId === "player.one")

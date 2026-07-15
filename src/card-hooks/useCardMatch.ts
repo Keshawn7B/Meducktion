@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   createBrowserCardMatchStorage,
   createCardMatchSession,
@@ -498,6 +498,20 @@ export function useCardMatch(): CardMatchController {
   const activeContent = session
     ? getCardCaseById(session.caseId) ?? thePainThatMovedCardCase
     : thePainThatMovedCardCase;
+
+  useEffect(() => {
+    if (!session) return;
+    const currentContent = getCardCaseById(session.caseId);
+    if (
+      currentContent &&
+      session.contentVersion === currentContent.contentVersion &&
+      session.matchState.contentVersion === currentContent.contentVersion
+    ) return;
+    resetCardMatch(storage);
+    setSession(null);
+    setScreen("home");
+    setSaveNotice("The card catalog changed, so the incompatible saved match was cleared. Start a new match to use the complete symptom deck.");
+  }, [session, storage]);
 
   function commit(run: CommandRun): CardMatchSession {
     setSession(run.session);

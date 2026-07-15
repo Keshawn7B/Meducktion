@@ -342,7 +342,7 @@ function PatientIntro({
       <section className="intro-stage">
         <div className="intro-portrait-wrap">
           <p className="round-ribbon">Fictional case &middot; 4 rounds</p>
-          <PatientPortrait name={model.patient.displayName} large />
+          <PatientPortrait large />
         </div>
         <div className="intro-story">
           <p className="playful-kicker">Meet the patient</p>
@@ -483,7 +483,7 @@ function MatchScreen({
               <div className="patient-round-pips" aria-label={`Round ${match.round} of ${match.maximumRounds}`}>
                 {Array.from({ length: match.maximumRounds }, (_, index) => <span key={index} className={index < match.round ? "is-current" : ""}>{index + 1}</span>)}
               </div>
-              <PatientPortrait name={model.patient.displayName} large />
+              <PatientPortrait large />
               <p className="playful-kicker">Patient</p>
               <h1 id="patient-table-name">{model.patient.displayName} <small>Age {model.patient.age}</small></h1>
               <p className="patient-table-story">{model.patient.shortStory}</p>
@@ -652,6 +652,7 @@ function InvestigationCard({ card, onToggle }: { card: CardView; onToggle: () =>
       </span>
       <span className="card-copy">
         <strong>{card.title}</strong>
+        <span>{card.description}</span>
       </span>
       <span className="card-answer-preview" aria-hidden="true">
         <b>YES</b><i>or</i><b>NO</b>
@@ -916,20 +917,15 @@ function PageHeader({
   );
 }
 
-function PatientPortrait({ name, large = false }: { name: string; large?: boolean }) {
+function PatientPortrait({ large = false }: { large?: boolean }) {
   return (
-    <div className={`patient-portrait${large ? " portrait-large" : ""}`} aria-label={`Friendly illustrated portrait of ${name}`}>
-      <div className="portrait-backdrop" aria-hidden="true">
-        <img className="patient-portrait-image" src={publicAsset("patient-jordan-lee.webp")} alt="" />
-        <span className="portrait-hair" />
-        <span className="portrait-face">
-          <i className="portrait-eye eye-left" />
-          <i className="portrait-eye eye-right" />
-          <i className="portrait-smile" />
-        </span>
-        <span className="portrait-neck" />
-        <span className="portrait-shirt" />
-        <span className="portrait-badge">J</span>
+    <div className={`patient-portrait${large ? " portrait-large" : ""}`} aria-label="Generic fictional patient mystery illustration">
+      <div className="portrait-backdrop">
+        <img
+          className="patient-portrait-image"
+          src={publicAsset("patient-mystery-placeholder.webp")}
+          alt="Patient chart with a question mark, bandage, and stethoscope"
+        />
       </div>
     </div>
   );

@@ -30,7 +30,8 @@ describe("player-facing card table", () => {
   it("mounts the active card controller into the tabletop screen", async () => {
     await openMatch();
     expect(screen.getByLabelText("Meducktion card table")).toBeInTheDocument();
-    expect(document.querySelector('img[src$="/assets/patient-jordan-lee.webp"]')).toBeInTheDocument();
+    expect(document.querySelector('img[src$="/assets/patient-mystery-placeholder.webp"]')).toBeInTheDocument();
+    expect(document.querySelector('img[src$="/assets/patient-jordan-lee.webp"]')).not.toBeInTheDocument();
     expect(document.querySelector('img[src$="/assets/opponent-dr-beak.webp"]')).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /question:/i })).toHaveLength(3);
     expect(screen.getByRole("heading", { name: "Your YES / NO evidence" })).toBeInTheDocument();

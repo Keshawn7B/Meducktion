@@ -165,6 +165,19 @@ describe("card match sessions", () => {
     );
   });
 
+  it("clears a stored match whose pinned card catalog is outdated", () => {
+    const storage = createMemoryCardMatchStorage();
+    const stale = JSON.parse(serializeCardMatch(createSession())) as Record<string, unknown>;
+    stale.contentVersion = "older-content";
+    storage.save(CARD_MATCH_STORAGE_KEY, JSON.stringify(stale));
+
+    const loaded = loadCardMatch(storage);
+
+    expect(loaded.session).toBeUndefined();
+    expect(loaded.error?.code).toBe("LEGACY_RULES_CHANGED");
+    expect(storage.load(CARD_MATCH_STORAGE_KEY)).toBeNull();
+  });
+
   it("does not persist temporary UI state", () => {
     const serialized = serializeCardMatch(createSession());
 

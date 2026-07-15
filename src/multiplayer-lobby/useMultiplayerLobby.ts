@@ -30,6 +30,15 @@ function rememberRoomCode(roomCode?: string): void {
   } catch { /* Reconnect persistence is optional. */ }
 }
 
+function roomUsesCurrentCardContent(room: MultiplayerRoom): boolean {
+  const content = getCardCaseById(room.caseId);
+  return content !== undefined &&
+    room.contentVersion === content.contentVersion &&
+    (room.session == null ||
+      (room.session.contentVersion === content.contentVersion &&
+        room.session.matchState.contentVersion === content.contentVersion));
+}
+
 export interface MultiplayerLobbyController {
   readonly model: MultiplayerLobbyModel;
   readonly actions: MultiplayerLobbyActions;
@@ -142,6 +151,12 @@ export function useMultiplayerLobby(onExit?: () => void): MultiplayerLobbyContro
         setErrorMessage("This room is no longer available.");
         return;
       }
+      if (!roomUsesCurrentCardContent(nextRoom)) {
+        setRoom(null);
+        rememberRoomCode();
+        setErrorMessage("That room uses an older card catalog and cannot be resumed. Create a new room to use the complete symptom deck.");
+        return;
+      }
       const currentUid = uidRef.current;
       if (currentUid && nextRoom.session?.matchState.players[currentUid]?.kind === "bot") {
         unsubscribeRef.current?.();
@@ -200,6 +215,10 @@ export function useMultiplayerLobby(onExit?: () => void): MultiplayerLobbyContro
       }
       const user = await ensureAnonymousPlayer();
       const joined = await repository().joinRoom(roomCode, user.uid, displayName);
+      if (!roomUsesCurrentCardContent(joined)) {
+        await repository().leaveRoom(roomCode, user.uid).catch(() => undefined);
+        throw new Error("That room uses an older card catalog and cannot be resumed. Create a new room to use the complete symptom deck.");
+      }
       uidRef.current = user.uid;
       setUid(user.uid);
       setRoom(joined);
@@ -214,6 +233,9 @@ export function useMultiplayerLobby(onExit?: () => void): MultiplayerLobbyContro
     }),
     startLobby: async () => run("start", async () => {
       if (!room || !uid) return;
+      if (!roomUsesCurrentCardContent(room)) {
+        throw new Error("This room uses an older card catalog. Create a new room before starting.");
+      }
       const roomContent = getCardCaseById(room.caseId) ?? thePainThatMovedCardCase;
       const match = createCardMatch(roomContent, {
         seed: room.seed,
@@ -490,7 +512,7 @@ export function useMultiplayerLobby(onExit?: () => void): MultiplayerLobbyContro
     };
   }
 
-  const match = room?.session && uid && matchActions
+  const match = room?.session && uid && matchActions && roomUsesCurrentCardContent(room)
     ? {
         model: addOnlineState(buildCardAppModel(
           getCardCaseById(room.caseId) ?? thePainThatMovedCardCase,

@@ -128,5 +128,10 @@ describe("competitive card content", () => {
     expect(player).toBeDefined();
     const cardIds = player?.deck.drawPile.map((instance) => instance.cardId) ?? [];
     expect(new Set(cardIds).size).toBe(cardIds.length);
+    const startingClueId = thePainThatMovedCardCase.variants[0]!.startingClueId;
+    const startingCard = thePainThatMovedCardCase.cards.find(
+      (card) => card.result.type === "reveal_clue" && card.result.clueId === startingClueId,
+    );
+    expect(cardIds).not.toContain(startingCard?.id);
   });
 });

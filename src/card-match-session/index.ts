@@ -227,7 +227,23 @@ export function loadCardMatch(storage: CardMatchStorageAdapter): {
 } {
   try {
     const current = storage.load(CARD_MATCH_STORAGE_KEY);
-    if (current) return deserializeCardMatch(current);
+    if (current) {
+      const loaded = deserializeCardMatch(current);
+      if (
+        loaded.error?.code === "CONTENT_VERSION_MISMATCH" ||
+        loaded.error?.code === "UNKNOWN_CASE" ||
+        loaded.error?.code === "UNSUPPORTED_SESSION_VERSION"
+      ) {
+        storage.remove(CARD_MATCH_STORAGE_KEY);
+        return {
+          error: {
+            code: "LEGACY_RULES_CHANGED",
+            message: "The card catalog changed, so the incompatible saved match was cleared. Start a new match to use the complete symptom deck.",
+          },
+        };
+      }
+      return loaded;
+    }
     if (storage.load(LEGACY_SOLO_STORAGE_KEY)) {
       return {
         legacySaveFound: true,

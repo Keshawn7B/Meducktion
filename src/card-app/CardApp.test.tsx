@@ -279,6 +279,7 @@ describe("competitive card-game UI", () => {
     }));
     render(<CardApp model={model("match", { hand: lockedHand, canLock: false, canUnlock: true, canReveal: false, phase: "card_selection" })} actions={actions()} />);
     expect(screen.getAllByRole("button", { name: /question:/i })).toHaveLength(3);
+    expect(screen.getByText("Ask Jordan how the pain changed.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Tender abdomen.*Locked/i })).toHaveClass("is-locked");
     expect(screen.getAllByText("Locked").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "Unlock Card" })).toBeInTheDocument();

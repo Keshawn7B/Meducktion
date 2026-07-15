@@ -138,12 +138,19 @@ function makeDeck(
   playerId: string,
   source: MatchState["rng"],
 ): { cards: CardInstance[]; rng: MatchState["rng"] } {
-  const instances = getCompatibleCards(content, variantId).flatMap((card) =>
-    Array.from({ length: card.copies }, (_, copyIndex) => ({
-      instanceId: `${playerId}:${card.id}:${copyIndex + 1}`,
-      cardId: card.id,
-    })),
-  );
+  const startingClueId = content.variants.find(
+    (variant) => variant.id === variantId,
+  )?.startingClueId;
+  const instances = getCompatibleCards(content, variantId)
+    .filter((card) =>
+      card.result.type !== "reveal_clue" || card.result.clueId !== startingClueId,
+    )
+    .flatMap((card) =>
+      Array.from({ length: card.copies }, (_, copyIndex) => ({
+        instanceId: `${playerId}:${card.id}:${copyIndex + 1}`,
+        cardId: card.id,
+      })),
+    );
   const shuffled = seededShuffle(instances, source);
   const remaining = [...shuffled.values];
   const opening: CardInstance[] = [];
