@@ -68,6 +68,33 @@ const profiles: Readonly<Record<string, readonly SymptomKey[]>> = {
   "Urinary infection": ["fever", "headache", "dizzy", "nausea", "vomiting", "belly-pain", "poor-appetite", "fatigue", "dehydrated", "glucose-normal", "oxygen-normal"],
 };
 
+const conditionDescriptions: Readonly<Record<string, string>> = {
+  "Acid reflux": "Stomach contents flow back into the food pipe, causing irritation or a burning feeling.",
+  "Allergic reaction": "The immune system reacts to a normally harmless trigger, sometimes affecting the skin, breathing, or digestion.",
+  Appendicitis: "Inflammation of the appendix, a small pouch attached to the large intestine.",
+  "Asthma flare": "Asthma symptoms worsen as the lung airways swell, tighten, and become harder to breathe through.",
+  "Common cold": "A usually mild viral infection of the nose and throat.",
+  "Contact dermatitis": "Skin inflammation caused by direct contact with an irritant or allergen.",
+  Dehydration: "The body has lost more fluid than it has taken in.",
+  "Food intolerance": "Difficulty digesting a particular food that is not an immune-system allergy.",
+  "Heat exhaustion": "A heat illness caused by overheating, often together with fluid and salt loss.",
+  "Influenza-like illness": "An illness with flu-like respiratory and whole-body symptoms without naming one specific virus.",
+  "Inner-ear vertigo": "A balance problem involving the inner ear that can create a spinning sensation.",
+  "Kidney stone": "A hard mineral deposit in the urinary system that can cause severe pain as it moves.",
+  Laryngitis: "Inflammation of the voice box and vocal cords, often causing hoarseness or voice loss.",
+  "Low blood sugar": "A blood glucose level below the expected range.",
+  Migraine: "A neurological condition that causes recurring headache attacks and other symptoms such as nausea or light sensitivity.",
+  "Panic attack": "A sudden episode of intense fear or discomfort accompanied by strong physical symptoms.",
+  Pneumonia: "An infection that inflames the air sacs in one or both lungs.",
+  "Poor sleep": "Too little or low-quality sleep to provide adequate rest and recovery.",
+  "Seasonal allergies": "An immune response to seasonal triggers such as pollen, often irritating the nose and eyes.",
+  "Acute sinusitis": "Short-term inflammation and swelling of the spaces around the nose, often following an infection.",
+  "Viral gastroenteritis": "A viral infection that inflames the stomach and intestines.",
+  "Strep throat": "An infection of the throat and tonsils caused by group A Streptococcus bacteria.",
+  "Tension headache": "A common headache that typically feels like pressure or tightening around the head.",
+  "Urinary infection": "An infection in part of the urinary system, commonly the bladder or urethra.",
+};
+
 interface ScenarioSpec {
   slug: string;
   title: string;
@@ -202,14 +229,19 @@ function createCase(spec: ScenarioSpec): CardCaseContent {
   }));
   return {
     schemaVersion: "card-case-v1",
-    contentVersion: "6.1.0-medically-approved-profiles.1",
+    contentVersion: "6.1.1-condition-descriptions.1",
     caseId,
     title: spec.title,
     status: "medicallyApproved",
     patient: { id: isOriginalCase ? "patient.jordan-lee" : `patient.${spec.slug}`, displayName: spec.patient, age: spec.age, pronouns: "they/them", portraitKey: "patient.generic", introduction: spec.introduction },
     disclaimer,
     correctConditionId: conditionIds[0]!,
-    conditions: conditionNames.map((displayName, index) => ({ id: conditionIds[index]!, displayName, learnMore: `One possible answer in this fictional mystery.`, iconKey: `condition-${index + 1}` })),
+    conditions: conditionNames.map((displayName, index) => ({
+      id: conditionIds[index]!,
+      displayName,
+      learnMore: conditionDescriptions[displayName] ?? "A possible condition in this fictional mystery.",
+      iconKey: `condition-${index + 1}`,
+    })),
     clues,
     cards,
     variants: [{ id: variantId, displayName: "Classic deduction", startingClueId: clues[0]!.id, initiallyStrongAlternativeId: conditionIds[1]!, especiallyValuableCardIds: cards.filter((_, index) => clues[index]!.meaningful).slice(0, 4).map((card) => card.id) }],

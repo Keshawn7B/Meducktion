@@ -51,8 +51,21 @@ describe("competitive card content", () => {
     expect(thePainThatMovedCardCase.correctConditionId).toBe(
       "diagnosis.appendicitis",
     );
-    expect(thePainThatMovedCardCase.contentVersion).toContain("medically-approved-profiles");
+    expect(thePainThatMovedCardCase.contentVersion).toContain("condition-descriptions");
     expect(thePainThatMovedCardCase.status).toBe("medicallyApproved");
+  });
+
+  it("provides a brief diagnosis-specific Learn more description for every condition", () => {
+    for (const cardCase of cardCaseRegistry) {
+      for (const condition of cardCase.conditions) {
+        expect(condition.learnMore.length).toBeGreaterThan(20);
+        expect(condition.learnMore).not.toContain("One possible answer");
+      }
+    }
+    const appendicitis = thePainThatMovedCardCase.conditions.find(
+      (condition) => condition.displayName === "Appendicitis",
+    );
+    expect(appendicitis?.learnMore).toContain("appendix");
   });
 
   it("uses only Ask, Check, and Test question categories", () => {
