@@ -27,16 +27,11 @@
   font-size: 1.35rem;
 }
 
-.lobby-wordmark > span {
-  display: grid;
-  width: 2.5rem;
-  aspect-ratio: 1;
-  place-items: center;
-  color: #103b41;
-  background: var(--md-primary);
-  border: 3px solid #9af0e8;
-  border-radius: 50% 50% 45% 55%;
-  font-weight: 900;
+.lobby-wordmark > img {
+  width: 3.25rem;
+  height: 3.25rem;
+  object-fit: contain;
+  filter: drop-shadow(0 0.25rem 0.18rem rgb(0 0 0 / 30%));
 }
 
 .lobby-live-badge {

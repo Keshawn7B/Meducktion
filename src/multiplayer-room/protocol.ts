@@ -21,8 +21,8 @@ export function createRoomRecord(input: CreateMultiplayerRoomInput): Multiplayer
 }
 
 export function joinRoomRecord(room: MultiplayerRoom, uid: string, displayName: string, now: number): MultiplayerRoom {
-  if (room.status !== "lobby") throw new MultiplayerRoomError("ROOM_ACTIVE", "This match already started.");
   if (room.memberUids.includes(uid)) return room;
+  if (room.status !== "lobby") throw new MultiplayerRoomError("ROOM_ACTIVE", "This match already started.");
   if (room.memberUids.length >= room.maximumPlayers) throw new MultiplayerRoomError("ROOM_FULL", "This room is full.");
   return { ...room, memberUids: [...room.memberUids, uid], members: { ...room.members, [uid]: { uid, displayName: displayName.trim() || "Player", joinedAt: now, ready: false } }, revision: room.revision + 1 };
 }
@@ -36,13 +36,18 @@ export function setMemberReady(room: MultiplayerRoom, uid: string, ready: boolea
 
 export function leaveRoomRecord(room: MultiplayerRoom, uid: string): MultiplayerRoom {
   if (!room.memberUids.includes(uid)) throw new MultiplayerRoomError("NOT_MEMBER", "You are not a member of this room.");
-  if (room.hostUid === uid) throw new MultiplayerRoomError("NOT_HOST", "The host closes the room instead of leaving it.");
   if (room.status !== "lobby") throw new MultiplayerRoomError("ROOM_ACTIVE", "This lobby already started.");
   const members = { ...room.members };
   delete members[uid];
+  const memberUids = room.memberUids.filter((memberUid) => memberUid !== uid);
+  const nextHostUid = room.hostUid === uid ? memberUids[0] : room.hostUid;
+  if (!nextHostUid) throw new MultiplayerRoomError("NOT_HOST", "The empty room should be closed.");
+  const nextHost = members[nextHostUid];
+  if (nextHost) members[nextHostUid] = { ...nextHost, ready: true };
   return {
     ...room,
-    memberUids: room.memberUids.filter((memberUid) => memberUid !== uid),
+    hostUid: nextHostUid,
+    memberUids,
     members,
     revision: room.revision + 1,
   };
@@ -67,6 +72,29 @@ export function startRoomRecord(room: MultiplayerRoom, uid: string, session: Car
 export function applyRoomCommand(room: MultiplayerRoom, uid: string, envelope: CardMatchCommandEnvelope, now: number): MultiplayerRoom {
   if (!room.memberUids.includes(uid)) throw new MultiplayerRoomError("NOT_MEMBER", "You are not a member of this room.");
   if (room.status !== "active" || !room.session) throw new MultiplayerRoomError("SESSION_ERROR", "This room has no active match.");
+  if ("playerId" in envelope.command && envelope.command.playerId !== uid) {
+    throw new MultiplayerRoomError("NOT_MEMBER", "You can only act for your own player seat.");
+  }
+  if (
+    "playerId" in envelope.command &&
+    envelope.command.type !== "CONVERT_TO_BOT" &&
+    room.session.matchState.players[uid]?.kind !== "human"
+  ) {
+    throw new MultiplayerRoomError("SESSION_ERROR", "This seat is now controlled by a bot.");
+  }
+  if (envelope.command.type === "CONTINUE_FROM_DIAGNOSIS") {
+    const state = room.session.matchState;
+    const everyPlayerDecided = state.playerOrder.every((playerId) => {
+      const player = state.players[playerId];
+      return !player ||
+        player.finalDiagnosisSubmitted ||
+        player.diagnosisSubmissions.some((submission) => submission.round === state.currentRound) ||
+        (state.diagnosisPassedPlayerIds ?? []).includes(playerId);
+    });
+    if (!everyPlayerDecided) {
+      throw new MultiplayerRoomError("SESSION_ERROR", "Every player must diagnose or keep investigating first.");
+    }
+  }
   const transition = applyCardMatchCommand(room.session, envelope);
   if (transition.error) throw new MultiplayerRoomError("SESSION_ERROR", transition.error.message);
   return { ...room, status: transition.session.matchState.phase === "match_complete" ? "complete" : "active", session: transition.session, revision: room.revision + (transition.duplicate ? 0 : 1), expiresAt: Math.max(room.expiresAt, now + ACTIVE_EXTENSION) };

@@ -134,6 +134,9 @@ function statusForMatch(
     case "clue_review":
       return "New clues are ready to review.";
     case "diagnosis_window":
+      if ((state.diagnosisPassedPlayerIds ?? []).includes(player.id)) {
+        return "Waiting for the other players to decide.";
+      }
       if (
         player.diagnosisLockedUntilRound !== null &&
         state.currentRound < player.diagnosisLockedUntilRound
@@ -187,9 +190,10 @@ export function buildCardAppModel(
   statusMessage = "",
   saveNotice?: string,
   errorMessage?: string,
+  playerId = HUMAN_PLAYER_ID,
 ): CardAppModel {
   const state = session?.matchState;
-  const human = state?.players[HUMAN_PLAYER_ID];
+  const human = state?.players[playerId];
   const visibleScreen =
     requestedScreen === "match" && state?.phase === "match_complete"
       ? "results"
@@ -264,7 +268,7 @@ export function buildCardAppModel(
               wrongAttemptPenalties: score.wrongAttemptPenalty,
             },
             investigationPath: player?.plays.map((play) => play.displayName) ?? [],
-            isHuman: ranking.playerId === HUMAN_PLAYER_ID,
+            isHuman: ranking.playerId === playerId,
           };
         }),
       }
@@ -328,11 +332,11 @@ export function buildCardAppModel(
       privateClues,
       opponents:
         state?.playerOrder
-          .filter((playerId) => playerId !== HUMAN_PLAYER_ID)
-          .map((playerId) => {
-            const opponent = state.players[playerId];
+          .filter((opponentId) => opponentId !== playerId)
+          .map((opponentId) => {
+            const opponent = state.players[opponentId];
             const latestPlay = state.latestPlays.find(
-              (play) => play.playerId === playerId,
+              (play) => play.playerId === opponentId,
             );
             const status = opponent?.finalDiagnosisSubmitted
               ? ("diagnosed" as const)
@@ -344,10 +348,10 @@ export function buildCardAppModel(
                   ? ("reviewing" as const)
                   : ("choosing" as const);
             return {
-              id: playerId,
+              id: opponentId,
               displayName: opponent?.displayName ?? "Bot",
-              styleLabel: "Balanced bot",
-              avatar: "B",
+              styleLabel: opponent?.kind === "bot" ? "Balanced bot" : "Online player",
+              avatar: opponent?.displayName.slice(0, 1).toUpperCase() ?? "?",
               status,
               ...(latestPlay ? { playedCategory: latestPlay.category } : {}),
             };
@@ -364,7 +368,7 @@ export function buildCardAppModel(
               clue.round === state.currentRound && clue.sourceId === play.cardId,
           );
           const reveal = publicReveal ??
-            (play.playerId === HUMAN_PLAYER_ID ? privateReveal : undefined);
+            (play.playerId === playerId ? privateReveal : undefined);
           const clue = reveal
             ? clueDefinition(content, reveal.clueId)
             : undefined;
@@ -387,7 +391,7 @@ export function buildCardAppModel(
                 }
               : {}),
             clueIsHidden:
-              play.playerId !== HUMAN_PLAYER_ID &&
+              play.playerId !== playerId &&
               play.visibility === "private",
           };
         }) ?? [],
@@ -401,7 +405,7 @@ export function buildCardAppModel(
         : {}),
       redrawAvailable: human?.redrawAvailable ?? true,
       diagnosisUnlocked:
-        state !== undefined && isDiagnosisAvailable(state, HUMAN_PLAYER_ID),
+        state !== undefined && isDiagnosisAvailable(state, playerId),
       diagnosisAttemptsRemaining: Math.max(
         0,
         2 - (human?.diagnosisAttemptsUsed ?? 0),
@@ -423,9 +427,15 @@ export function buildCardAppModel(
       canLock:
         state?.phase === "card_selection" &&
         human?.correctDiagnosisRound === null,
-      canReveal: state?.phase === "cards_locked",
+      canReveal:
+        state?.phase === "cards_locked" ||
+        (state?.phase === "card_reveal" &&
+          !(state.acknowledgedRevealPlayerIds ?? []).includes(playerId)),
+      revealActionLabel:
+        state?.phase === "card_reveal" ? "Review Clues" : "Reveal Cards",
       canAdvance:
         state?.phase === "diagnosis_window" &&
+        !(state.diagnosisPassedPlayerIds ?? []).includes(playerId) &&
         !(
           state.currentRound >= state.maximumRounds &&
           human !== undefined &&

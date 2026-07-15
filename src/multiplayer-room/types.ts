@@ -43,6 +43,11 @@ export interface MultiplayerRoomRepository {
   setReady(roomId: string, uid: string, ready: boolean): Promise<MultiplayerRoom>;
   markReadyToStart(roomId: string, uid: string): Promise<MultiplayerRoom>;
   leaveRoom(roomId: string, uid: string): Promise<void>;
+  closeRoom(roomId: string, uid: string): Promise<void>;
+  heartbeatPresence(roomId: string, uid: string): Promise<void>;
+  removePresence(roomId: string, uid: string): Promise<void>;
+  subscribePresence(roomId: string, listener: (presence: Readonly<Record<string, number>>) => void): () => void;
+  replaceStalePlayer(roomId: string, actorUid: string, staleUid: string, envelope: CardMatchCommandEnvelope, timeoutMs: number): Promise<MultiplayerRoom>;
   startRoom(roomId: string, uid: string, session: CardMatchSession): Promise<MultiplayerRoom>;
   submitCommand(roomId: string, uid: string, envelope: CardMatchCommandEnvelope): Promise<MultiplayerRoom>;
   subscribe(roomId: string, listener: (room: MultiplayerRoom | null) => void): () => void;

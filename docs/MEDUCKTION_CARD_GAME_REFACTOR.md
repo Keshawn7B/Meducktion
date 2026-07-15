@@ -178,19 +178,29 @@ Card matches use a new versioned snapshot and the storage key `meducktion:card-m
 
 Resume must recreate the match exactly and reject corrupt or incompatible snapshots safely. Temporary animation, open-panel, hover, and form state remains in React and is not persisted. A snapshot under the former `meducktion:solo-session` rules is not resumed as a card match. The UI should explain that the rules changed and offer a new match; it must never crash or silently reinterpret legacy state.
 
-## Future multiplayer boundary
+## Online multiplayer
 
-### Multiplayer lobby implemented
+### Lobby and synchronized match implemented
 
-The transport and lobby slice is present under `src/firebase`, `src/multiplayer-room`, and `src/multiplayer-lobby`. The home screen offers separate local and online entry points. Online players can create a private room, select two to four seats, share or enter a six-character room code, join anonymously, see live membership, toggle their own ready state, leave without keeping a ghost seat, and let the host lock a fully ready lobby. Firebase initialization remains lazy, so local play and ordinary UI tests do not contact Firebase.
+The transport, lobby, and live-match slice is present under `src/firebase`, `src/multiplayer-room`, and `src/multiplayer-lobby`. The home screen offers separate local and online entry points. Online players can create a private room, select two to four seats, share or enter a six-character room code, join anonymously, see live membership, toggle their own ready state, leave without keeping a ghost seat, and let the host start a fully ready match. Firebase initialization remains lazy, so local play and ordinary UI tests do not contact Firebase.
 
-Firestore rules permit authenticated users to read a lobby in order to join, prohibit room listing, restrict initial creation to the authenticated host, cap membership, preserve pinned room fields, allow a guest to change only their own ready state or leave, and allow only the host to lock or delete the room. The deployed rules intentionally reject live match-state writes. Emulator-backed rules tests cover permitted joins/readiness/host locking and rejected cross-player edits. They require JDK 21 or newer because of the current Firebase CLI requirement.
+The host creates one deterministic all-human engine session from the room's pinned case, content version, seed, and member order. Every card selection, redraw, lock, reveal acknowledgement, diagnosis, and round transition travels through the existing command envelope and Firestore transaction boundary. The repository normalizes sequence and revision values against the latest snapshot, preventing concurrent clients from accidentally overwriting a newer transition while command IDs retain idempotency. React builds the table from the authenticated player's ID and never renders another player's hand, private clue text, or diagnosis choice.
 
-The ready transition stores no card-match session. After the host starts, the UI clearly stops at a secure handoff screen rather than publishing hidden cards or private clues in the shared room document. Per-player private-state partitioning, authoritative live commands, reconnect presentation, host migration, and two-browser full-match testing remain next. A disposable production smoke test verified create, join, ready, lock, and cleanup against the deployed `meducktion` project.
+Round progression is multiplayer-aware. Every active player must lock before reveal, acknowledge the reveal before diagnosis opens, and either diagnose or explicitly keep investigating before the room advances. Round 4 still requires a diagnosis while an attempt remains. The room code is retained locally so a refresh can restore the subscription after Firebase restores the anonymous identity. If a lobby host leaves, ownership transfers deterministically to the next seated player. If someone explicitly leaves an active match, their engine seat becomes a Balanced bot and completes any pending lock, reveal acknowledgement, or diagnosis decision so the room cannot be stranded.
 
 Firebase networking remains outside the engine. The engine knows nothing about Firebase, browser clocks, presence, authentication, transport retries, or server timestamps. The room adapter transmits validated commands and versioned snapshots and enforces expected revisions and command idempotency. It must not resolve cards, inspect private clues for unrelated players, choose bot actions, recalculate scores, or alter authored medical truth.
 
-Before wider online play, the team must finish authoritative security boundaries for hidden information, concurrent locking, reconnects, host migration, and cheating resistance. Cloud Functions and matchmaking are not implemented.
+This remains an unranked, trusted-room MVP. The complete deterministic session currently lives in the member-readable room snapshot, so a member can inspect hidden state through developer tools even though the interface keeps it hidden. Before ranked or public competitive play, split authority and player-private state behind a trusted server or host-authority partition and run a two-browser emulator/E2E suite. Cloud Functions and matchmaking are not implemented.
+
+### Production Firestore status
+
+The room rules were compiled and deployed to Firebase project `meducktion` on July 14, 2026. Emulator coverage verifies authenticated lobby joins, own-readiness updates, host-only starts, deterministic host transfer, member-scoped presence heartbeats, timed-out seat replacement, active member transitions, and denial of unauthenticated or outsider access. A disposable production smoke test used two isolated anonymous users to create and join a room, ready the guest, create the pinned all-human session, start the match, select and lock cards from both clients, observe the synchronized `cards_locked` phase, and delete the room afterward.
+
+### Final multiplayer polish
+
+The active table now keeps the private room code and a Live, Syncing, or Offline indicator visible without reopening the lobby. Interactive card, redraw, lock, reveal, diagnosis, continue, and rematch controls pause while a Firestore command is in flight or the browser reports that it is offline, which prevents accidental duplicate commands and gives the player a clear recovery signal. Leaving an active match requires confirmation and retains the existing deterministic bot takeover. When a completed room's host chooses Play Again, the finished Firestore room is deleted before returning home; non-host players simply leave the completed view.
+
+Active matches now maintain presence in a dedicated Firestore subcollection so heartbeats never change the deterministic room session or command revision. Each player refreshes their server-timestamped presence every 15 seconds and when returning to a visible tab. Opponents first show Reconnecting; after a 90-second grace period, a remaining member transactionally converts the stale human seat to the existing Balanced bot and continues any pending reveal or diagnosis transition. A player who returns after takeover receives a clear explanation instead of being allowed to control the bot seat. Offline play cannot progress until connectivity returns.
 
 ## First converted case
 
@@ -225,10 +235,10 @@ Remaining v2 work is deliberately staged rather than folded into this narrow eng
 
 ## Current limitations
 
-- Online create/join/readiness lobbies work through Firebase, but synchronized human-to-human card play is not connected yet.
+- Online rooms synchronize complete two-to-four-player matches, but remain client-authoritative trusted rooms rather than cheat-resistant ranked play.
 - Bot behavior is intentionally simple and is not a competitive production AI.
 - The first case provides limited replay variety; additional variants require medically responsible authoring and review.
-- The competitive 2–4 player architecture still needs real multi-device synchronization and playtesting.
+- The competitive 2–4 player flow still needs broader real-device latency, disconnect, and refresh playtesting.
 - Professional medical review and release authority remain pending.
 - Accessibility and responsive behavior require continued manual browser verification in addition to automated tests.
 - Client-side game state is inspectable; future online competitive integrity needs an authoritative design.

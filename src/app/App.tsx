@@ -54,7 +54,11 @@ function Landing({
 }) {
   return (
     <main id="main" className="landing">
-      <div className="signal-mark" aria-hidden="true">M</div>
+      <img
+        className="signal-mark"
+        src={`${import.meta.env.BASE_URL}assets/meducktion-medical-duck-logo.webp`}
+        alt=""
+      />
       <p className="eyebrow">Medical mystery · solo prototype</p>
       <h1>
         Meducktion

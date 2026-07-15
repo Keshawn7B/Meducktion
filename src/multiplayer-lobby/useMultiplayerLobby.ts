@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { thePainThatMovedCardCase } from "../card-content";
+import { createCardMatch, type CardGameCommand } from "../card-game-engine";
+import { applyCardMatchCommand, createCardMatchSession } from "../card-match-session";
+import { buildCardAppModel, type CardMatchController } from "../card-hooks/useCardMatch";
+import type { CardAppActions, CardAppModel, DiagnosisInput } from "../card-app/types";
 import { ensureAnonymousPlayer, getFirebaseServices } from "../firebase/client";
 import {
   FirestoreMultiplayerRoomRepository,
@@ -10,11 +14,26 @@ import {
 import type { MultiplayerLobbyActions, MultiplayerLobbyModel } from "./types";
 
 const ROOM_CODE_PATTERN = /^[A-HJ-NP-Z2-9]{6}$/;
+const ACTIVE_ROOM_STORAGE_KEY = "meducktion:multiplayer-room";
+const PRESENCE_HEARTBEAT_MS = 15_000;
+export const PRESENCE_TIMEOUT_MS = 90_000;
 type LobbyOperation = NonNullable<MultiplayerLobbyModel["operation"]>;
+
+function savedRoomCode(): string {
+  try { return localStorage.getItem(ACTIVE_ROOM_STORAGE_KEY) ?? ""; } catch { return ""; }
+}
+
+function rememberRoomCode(roomCode?: string): void {
+  try {
+    if (roomCode) localStorage.setItem(ACTIVE_ROOM_STORAGE_KEY, roomCode);
+    else localStorage.removeItem(ACTIVE_ROOM_STORAGE_KEY);
+  } catch { /* Reconnect persistence is optional. */ }
+}
 
 export interface MultiplayerLobbyController {
   readonly model: MultiplayerLobbyModel;
   readonly actions: MultiplayerLobbyActions;
+  readonly match: (CardMatchController & { readonly leaveMatch: () => void }) | null;
 }
 
 function messageFrom(error: unknown): string {
@@ -29,16 +48,81 @@ function messageFrom(error: unknown): string {
   return "The lobby could not be updated. Please try again.";
 }
 
-export function useMultiplayerLobby(): MultiplayerLobbyController {
+export function useMultiplayerLobby(onExit?: () => void): MultiplayerLobbyController {
   const repositoryRef = useRef<MultiplayerRoomRepository | null>(null);
   const unsubscribeRef = useRef<(() => void) | null>(null);
+  const presenceUnsubscribeRef = useRef<(() => void) | null>(null);
+  const presenceMonitoringStartedRef = useRef(0);
+  const takeoverInFlightRef = useRef(new Set<string>());
+  const uidRef = useRef("");
   const [room, setRoom] = useState<MultiplayerRoom | null>(null);
   const [uid, setUid] = useState("");
   const [busy, setBusy] = useState(false);
+  const [isOnline, setIsOnline] = useState(
+    typeof navigator === "undefined" ? true : navigator.onLine,
+  );
+  const [presenceByUid, setPresenceByUid] = useState<Readonly<Record<string, number>>>({});
   const [operation, setOperation] = useState<LobbyOperation | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const commandCounter = useRef(0);
 
-  useEffect(() => () => unsubscribeRef.current?.(), []);
+  useEffect(() => {
+    let cancelled = false;
+    const roomCode = savedRoomCode();
+    if (ROOM_CODE_PATTERN.test(roomCode)) {
+      void ensureAnonymousPlayer().then((user) => {
+        if (cancelled) return;
+        uidRef.current = user.uid;
+        setUid(user.uid);
+        watchRoom(roomCode);
+      }).catch((error) => {
+        if (!cancelled) setErrorMessage(messageFrom(error));
+      });
+    }
+    return () => {
+      cancelled = true;
+      unsubscribeRef.current?.();
+      presenceUnsubscribeRef.current?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    presenceUnsubscribeRef.current?.();
+    presenceUnsubscribeRef.current = null;
+    setPresenceByUid({});
+    if (!room || room.status !== "active" || !uid) return;
+
+    const roomId = room.roomId;
+    const activeRepository = repository();
+    presenceMonitoringStartedRef.current = Date.now();
+    presenceUnsubscribeRef.current = activeRepository.subscribePresence(roomId, setPresenceByUid);
+    const heartbeat = () => {
+      if (navigator.onLine) void activeRepository.heartbeatPresence(roomId, uid).catch(() => undefined);
+    };
+    heartbeat();
+    const heartbeatInterval = window.setInterval(heartbeat, PRESENCE_HEARTBEAT_MS);
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") heartbeat();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.clearInterval(heartbeatInterval);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      presenceUnsubscribeRef.current?.();
+      presenceUnsubscribeRef.current = null;
+    };
+  }, [room?.roomId, room?.status, uid]);
 
   function repository(): MultiplayerRoomRepository {
     if (!repositoryRef.current) {
@@ -54,7 +138,17 @@ export function useMultiplayerLobby(): MultiplayerLobbyController {
     unsubscribeRef.current = repository().subscribe(roomCode, (nextRoom) => {
       if (!nextRoom) {
         setRoom(null);
+        rememberRoomCode();
         setErrorMessage("This room is no longer available.");
+        return;
+      }
+      const currentUid = uidRef.current;
+      if (currentUid && nextRoom.session?.matchState.players[currentUid]?.kind === "bot") {
+        unsubscribeRef.current?.();
+        unsubscribeRef.current = null;
+        setRoom(null);
+        rememberRoomCode();
+        setErrorMessage("Your seat was replaced by a bot after the connection timeout. Start or join a new room to keep playing.");
         return;
       }
       setRoom(nextRoom);
@@ -89,8 +183,10 @@ export function useMultiplayerLobby(): MultiplayerLobbyController {
         seed: `room-${roomCode}-${Date.now().toString(36)}`,
         now: Date.now(),
       });
+      uidRef.current = user.uid;
       setUid(user.uid);
       setRoom(created);
+      rememberRoomCode(created.roomId);
       watchRoom(created.roomId);
     }),
     joinRoom: async (displayName, rawRoomCode) => run("join", async () => {
@@ -100,8 +196,10 @@ export function useMultiplayerLobby(): MultiplayerLobbyController {
       }
       const user = await ensureAnonymousPlayer();
       const joined = await repository().joinRoom(roomCode, user.uid, displayName);
+      uidRef.current = user.uid;
       setUid(user.uid);
       setRoom(joined);
+      rememberRoomCode(joined.roomId);
       watchRoom(joined.roomId);
     }),
     toggleReady: async () => run("ready", async () => {
@@ -112,7 +210,27 @@ export function useMultiplayerLobby(): MultiplayerLobbyController {
     }),
     startLobby: async () => run("start", async () => {
       if (!room || !uid) return;
-      setRoom(await repository().markReadyToStart(room.roomId, uid));
+      const match = createCardMatch(thePainThatMovedCardCase, {
+        seed: room.seed,
+        matchId: `match.online.${room.roomId}`,
+        players: room.memberUids.map((memberUid) => ({
+          id: memberUid,
+          displayName: room.members[memberUid]?.displayName ?? "Player",
+          kind: "human" as const,
+        })),
+      });
+      let session = createCardMatchSession(match, `session.online.${room.roomId}`);
+      for (const command of [{ type: "START_MATCH" }, { type: "DRAW_CARDS" }] as const) {
+        const transition = applyCardMatchCommand(session, {
+          commandId: `${session.sessionId}:setup:${session.commandSequence + 1}`,
+          commandSequence: session.commandSequence + 1,
+          expectedRevision: session.matchState.revision,
+          command,
+        });
+        if (transition.error) throw new Error(transition.error.message);
+        session = transition.session;
+      }
+      setRoom(await repository().startRoom(room.roomId, uid, session));
     }),
     leaveRoom: async () => {
       if (!room || !uid || room.status !== "lobby") return true;
@@ -120,11 +238,14 @@ export function useMultiplayerLobby(): MultiplayerLobbyController {
       setOperation("leave");
       setErrorMessage("");
       try {
-      unsubscribeRef.current?.();
-      unsubscribeRef.current = null;
-      await repository().leaveRoom(room.roomId, uid);
-      setRoom(null);
-      setUid("");
+        unsubscribeRef.current?.();
+        unsubscribeRef.current = null;
+        await repository().leaveRoom(room.roomId, uid);
+        await repository().removePresence(room.roomId, uid).catch(() => undefined);
+        rememberRoomCode();
+        setRoom(null);
+        uidRef.current = "";
+        setUid("");
         return true;
       } catch (error) {
         setErrorMessage(messageFrom(error));
@@ -152,6 +273,205 @@ export function useMultiplayerLobby(): MultiplayerLobbyController {
   const isHost = Boolean(room && uid === room.hostUid);
   const allReady = members.length >= 2 && members.every((member) => member.ready);
 
+  async function sendCommand(
+    source: MultiplayerRoom,
+    command: CardGameCommand,
+  ): Promise<MultiplayerRoom> {
+    if (!source.session || !uid) throw new Error("The online match is not ready.");
+    commandCounter.current += 1;
+    const updated = await repository().submitCommand(source.roomId, uid, {
+      commandId: `${uid}:${Date.now().toString(36)}:${commandCounter.current}`,
+      commandSequence: source.session.commandSequence + 1,
+      expectedRevision: source.session.matchState.revision,
+      command,
+    });
+    setRoom(updated);
+    return updated;
+  }
+
+  async function performMatch(task: () => Promise<void>): Promise<void> {
+    setBusy(true);
+    setErrorMessage("");
+    try {
+      await task();
+    } catch (error) {
+      setErrorMessage(messageFrom(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function everyPlayerDecided(current: MultiplayerRoom): boolean {
+    const state = current.session?.matchState;
+    if (!state || state.phase !== "diagnosis_window") return false;
+    return state.playerOrder.every((playerId) => {
+      const player = state.players[playerId];
+      return !player ||
+        player.finalDiagnosisSubmitted ||
+        player.diagnosisSubmissions.some((submission) => submission.round === state.currentRound) ||
+        (state.diagnosisPassedPlayerIds ?? []).includes(playerId);
+    });
+  }
+
+  async function continueWhenReady(source: MultiplayerRoom): Promise<MultiplayerRoom> {
+    let next = source;
+    if (everyPlayerDecided(next)) {
+      next = await sendCommand(next, { type: "CONTINUE_FROM_DIAGNOSIS" });
+      if (next.session?.matchState.phase === "next_round") {
+        next = await sendCommand(next, { type: "ADVANCE_ROUND" });
+        next = await sendCommand(next, { type: "DRAW_CARDS" });
+      }
+    }
+    return next;
+  }
+
+  useEffect(() => {
+    if (!room?.session || room.status !== "active" || !uid || !isOnline || busy) return;
+    const checkForDisconnectedPlayer = () => {
+      if (Date.now() - presenceMonitoringStartedRef.current < PRESENCE_TIMEOUT_MS) return;
+      const staleUid = room.session?.matchState.playerOrder.find((playerId) => {
+        if (playerId === uid || takeoverInFlightRef.current.has(playerId)) return false;
+        const player = room.session?.matchState.players[playerId];
+        if (!player || player.kind !== "human") return false;
+        const lastSeenAt = presenceByUid[playerId];
+        return lastSeenAt === undefined || Date.now() - lastSeenAt >= PRESENCE_TIMEOUT_MS;
+      });
+      if (!staleUid) return;
+      takeoverInFlightRef.current.add(staleUid);
+      commandCounter.current += 1;
+      void performMatch(async () => {
+        let next = await repository().replaceStalePlayer(room.roomId, uid, staleUid, {
+          commandId: `${uid}:presence:${Date.now().toString(36)}:${commandCounter.current}`,
+          commandSequence: room.session!.commandSequence + 1,
+          expectedRevision: room.session!.matchState.revision,
+          command: { type: "CONVERT_TO_BOT", playerId: staleUid },
+        }, PRESENCE_TIMEOUT_MS);
+        setRoom(next);
+        if (next.session?.matchState.phase === "clue_review") {
+          next = await sendCommand(next, { type: "OPEN_DIAGNOSIS_WINDOW" });
+        }
+        await continueWhenReady(next);
+      }).finally(() => takeoverInFlightRef.current.delete(staleUid));
+    };
+    checkForDisconnectedPlayer();
+    const staleCheckInterval = window.setInterval(checkForDisconnectedPlayer, 5_000);
+    return () => window.clearInterval(staleCheckInterval);
+  }, [room, uid, isOnline, busy, presenceByUid]);
+
+  const matchActions: CardAppActions | null = room?.session && uid
+    ? {
+        goHome: () => onExit?.(),
+        openSetup: () => undefined,
+        resumeMatch: () => undefined,
+        startMatch: () => undefined,
+        dealCards: () => undefined,
+        toggleCard: (cardInstanceId) => void performMatch(async () => {
+          if (!room.session) return;
+          const selected = room.session.matchState.players[uid]?.hand.selectedCardInstanceId;
+          await sendCommand(room, selected === cardInstanceId
+            ? { type: "DESELECT_CARD", playerId: uid }
+            : { type: "SELECT_CARD", playerId: uid, cardInstanceId });
+        }),
+        useRedraw: () => void performMatch(async () => {
+          await sendCommand(room, { type: "USE_REDRAW", playerId: uid });
+        }),
+        lockCard: () => void performMatch(async () => {
+          await sendCommand(room, { type: "LOCK_CARD", playerId: uid });
+        }),
+        revealCards: () => void performMatch(async () => {
+          let next = room;
+          if (next.session?.matchState.phase === "cards_locked") {
+            next = await sendCommand(next, { type: "RESOLVE_ROUND" });
+          }
+          if (
+            next.session?.matchState.phase === "card_reveal" &&
+            !next.session.matchState.acknowledgedRevealPlayerIds.includes(uid)
+          ) {
+            next = await sendCommand(next, { type: "ACKNOWLEDGE_REVEAL", playerId: uid });
+          }
+          if (next.session?.matchState.phase === "clue_review") {
+            await sendCommand(next, { type: "OPEN_DIAGNOSIS_WINDOW" });
+          }
+        }),
+        advanceRound: () => void performMatch(async () => {
+          const passed = await sendCommand(room, { type: "PASS_DIAGNOSIS", playerId: uid });
+          await continueWhenReady(passed);
+        }),
+        submitDiagnosis: (input: DiagnosisInput) => void performMatch(async () => {
+          const submitted = await sendCommand(room, {
+            type: "SUBMIT_DIAGNOSIS",
+            playerId: uid,
+            conditionId: input.conditionId,
+            clueIds: input.clueIds,
+          });
+          await continueWhenReady(submitted);
+        }),
+        playAgain: () => void performMatch(async () => {
+          if (room.hostUid === uid) await repository().closeRoom(room.roomId, uid);
+          else await repository().removePresence(room.roomId, uid).catch(() => undefined);
+          rememberRoomCode();
+          onExit?.();
+        }),
+      }
+    : null;
+
+  function addOnlineState(model: CardAppModel): CardAppModel {
+    if (!room) return model;
+    const interactionBlocked = busy || !isOnline;
+    return {
+      ...model,
+      online: {
+        roomCode: room.roomId,
+        isSyncing: busy,
+        isOffline: !isOnline,
+      },
+      match: {
+        ...model.match,
+        hand: model.match.hand.map((card) => ({
+          ...card,
+          disabled: card.disabled || interactionBlocked,
+        })),
+        canLock: model.match.canLock && !interactionBlocked,
+        canReveal: model.match.canReveal && !interactionBlocked,
+        canAdvance: model.match.canAdvance && !interactionBlocked,
+        diagnosisUnlocked: model.match.diagnosisUnlocked && !interactionBlocked,
+        opponents: model.match.opponents.map((opponent) => {
+          const player = room.session?.matchState.players[opponent.id];
+          const lastSeenAt = presenceByUid[opponent.id];
+          const reconnecting = player?.kind === "human"
+            && Date.now() - presenceMonitoringStartedRef.current >= PRESENCE_HEARTBEAT_MS * 2
+            && (lastSeenAt === undefined || Date.now() - lastSeenAt >= PRESENCE_HEARTBEAT_MS * 2);
+          return reconnecting ? { ...opponent, status: "reconnecting" as const } : opponent;
+        }),
+      },
+    };
+  }
+
+  const match = room?.session && uid && matchActions
+    ? {
+        model: addOnlineState(buildCardAppModel(
+          thePainThatMovedCardCase,
+          room.session.matchState.phase === "match_complete" ? "results" : "match",
+          room.session,
+          busy ? "Syncing with the room…" : "",
+          undefined,
+          errorMessage || undefined,
+          uid,
+        )),
+        actions: matchActions,
+        leaveMatch: () => void performMatch(async () => {
+          let next = await sendCommand(room, { type: "CONVERT_TO_BOT", playerId: uid });
+          if (next.session?.matchState.phase === "clue_review") {
+            next = await sendCommand(next, { type: "OPEN_DIAGNOSIS_WINDOW" });
+          }
+          await continueWhenReady(next);
+          await repository().removePresence(room.roomId, uid).catch(() => undefined);
+          rememberRoomCode();
+          onExit?.();
+        }),
+      }
+    : null;
+
   return {
     model: {
       screen: room?.status === "ready" ? "ready" : room ? "room" : "entry",
@@ -166,5 +486,6 @@ export function useMultiplayerLobby(): MultiplayerLobbyController {
       members,
     },
     actions,
+    match,
   };
 }

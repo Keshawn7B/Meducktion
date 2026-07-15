@@ -402,6 +402,15 @@
   filter: blur(0.7rem);
 }
 
+.home-duck-logo {
+  z-index: 2;
+  width: min(28rem, 82%);
+  max-height: 32rem;
+  margin-top: 2rem;
+  object-fit: contain;
+  filter: drop-shadow(0 1.35rem 1rem rgb(12 31 45 / 34%));
+}
+
 .home-art .patient-portrait {
   z-index: 2;
   margin-top: 3rem;
@@ -1385,6 +1394,7 @@
 
 .status-locked { border-color: #91d5c5; color: #1e644f; background: #def5ed; }
 .status-diagnosed { border-color: #b8a8e7; color: #57417f; background: #eee8fb; }
+.status-reconnecting { border-color: #e4a45e; color: #754315; background: #fff0d6; }
 
 .privacy-note {
   margin: 1rem 0 0;
@@ -2030,7 +2040,7 @@
   .home-copy .brand-hero { justify-content: center; }
   .home-actions { justify-content: center; }
   .home-art { width: min(30rem, 100%); min-height: 27rem; margin: 0 auto; }
-  .home-art .portrait-large { width: 15rem; height: 19rem; }
+  .home-duck-logo { width: min(21rem, 80%); max-height: 24rem; }
   .art-card { width: 5.2rem; height: 7.3rem; font-size: 0.7rem; }
   .art-card span { width: 2.8rem; height: 2.8rem; }
 
@@ -2101,7 +2111,7 @@
   .home-actions .button { width: 100%; }
   .global-game-error { right: 0.5rem; bottom: 0.5rem; max-width: calc(100% - 1rem); }
   .home-art { min-height: 23rem; }
-  .home-art .portrait-large { width: 12.5rem; height: 16rem; }
+  .home-duck-logo { width: min(18rem, 78%); max-height: 20rem; margin-top: 1rem; }
   .clinic-window { top: 2rem; right: 1.2rem; transform: scale(0.8); transform-origin: top right; }
   .art-card { width: 4.5rem; height: 6.3rem; padding: 0.5rem; border-width: 0.25rem; }
   .art-card-ask { left: 0.5rem; top: 6rem; }
@@ -2197,6 +2207,32 @@
 
 /* Competitive tabletop match composition */
 .match-header-actions { display: flex; align-items: center; gap: 0.65rem; }
+.match-round-and-room { display: flex; align-items: center; justify-content: center; gap: 0.75rem; }
+.online-room-chip {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid rgb(130 237 221 / 32%);
+  border-radius: 999px;
+  color: #eafff9;
+  background: rgb(13 62 67 / 58%);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+}
+.online-room-chip i { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: #67e2b3; box-shadow: 0 0 0 0.2rem rgb(103 226 179 / 16%); }
+.online-room-chip small { color: #aee9dc; font-size: 0.62rem; text-transform: uppercase; }
+.online-room-chip.is-offline { border-color: rgb(255 190 137 / 40%); background: rgb(91 48 43 / 72%); }
+.online-room-chip.is-offline i { background: #ffad72; box-shadow: 0 0 0 0.2rem rgb(255 173 114 / 15%); }
+.button-leave-match {
+  padding: 0.55rem 0.8rem;
+  border-color: rgb(255 255 255 / 20%);
+  color: #fff7df;
+  background: rgb(9 30 48 / 58%);
+  font-size: 0.78rem;
+}
 
 .match-screen {
   width: min(96rem, calc(100% - 1.5rem));
@@ -2276,7 +2312,12 @@
   box-shadow: 0.18rem 0.22rem 0 rgb(0 0 0 / 25%);
   transform: rotate(calc((var(--card-index, 0) - 1) * 3deg));
 }
-.card-back i { font-size: 0.7rem; font-style: normal; font-weight: 1000; }
+.card-back img {
+  width: 76%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  filter: drop-shadow(0 0.12rem 0.08rem rgb(0 0 0 / 28%));
+}
 
 .tabletop-layout {
   position: relative;
@@ -2434,7 +2475,9 @@
 @media (max-width: 600px) {
   .match-header { grid-template-columns: 1fr auto; }
   .match-header .round-tracker { grid-column: 1 / -1; grid-row: 2; }
+  .match-round-and-room { grid-column: 1 / -1; grid-row: 2; flex-wrap: wrap; justify-content: flex-start; }
   .match-header-actions .button-header { display: none; }
+  .button-leave-match { min-height: 40px; padding: 0.5rem 0.6rem; font-size: 0.7rem; }
   .match-header-actions .button-diagnose { padding: 0.55rem 0.7rem; font-size: 0.75rem; }
   .match-jump-nav { display: flex; }
   .match-screen { width: 100%; padding: 0; }

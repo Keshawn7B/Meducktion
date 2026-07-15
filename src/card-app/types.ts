@@ -45,7 +45,7 @@ export interface OpponentView {
   readonly displayName: string;
   readonly styleLabel: string;
   readonly avatar?: string;
-  readonly status: "choosing" | "locked" | "reviewing" | "diagnosed";
+  readonly status: "choosing" | "locked" | "reviewing" | "diagnosed" | "reconnecting";
   readonly playedCategory?: CardCategory;
 }
 
@@ -83,6 +83,11 @@ export interface PlayerResultView {
 export interface CardAppModel {
   readonly screen: CardAppScreen;
   readonly canResume: boolean;
+  readonly online?: {
+    readonly roomCode: string;
+    readonly isSyncing: boolean;
+    readonly isOffline: boolean;
+  };
   readonly legacySaveNotice?: string;
   readonly errorMessage?: string;
   readonly setup: {
@@ -121,6 +126,7 @@ export interface CardAppModel {
     readonly mustDiagnose: boolean;
     readonly canLock: boolean;
     readonly canReveal: boolean;
+    readonly revealActionLabel: "Reveal Cards" | "Review Clues";
     readonly canAdvance: boolean;
     readonly statusMessage: string;
   };
@@ -162,4 +168,5 @@ export interface CardAppProps {
   readonly model: CardAppModel;
   readonly actions: CardAppActions;
   readonly onOpenMultiplayer?: () => void;
+  readonly onLeaveMatch?: () => void;
 }
