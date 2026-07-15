@@ -96,6 +96,8 @@ function model(screen: CardAppModel["screen"], patch?: Partial<CardAppModel["mat
           answer: "no",
         },
       ],
+      hiddenClueAnswers: [],
+      cluePilePenaltyChoiceRequired: false,
       opponents: [
         {
           id: "player.bot",
@@ -128,9 +130,10 @@ function model(screen: CardAppModel["screen"], patch?: Partial<CardAppModel["mat
       ],
       redrawAvailable: true,
       diagnosisUnlocked: true,
-      diagnosisAttemptsRemaining: 2,
+      diagnosisAttemptsRemaining: 3,
       diagnosisBlockedUntilNextRound: false,
       humanHasDiagnosed: false,
+      humanEliminated: false,
       mustDiagnose: false,
       canLock: true,
       canUnlock: false,
@@ -158,6 +161,7 @@ function actions(): CardAppActions {
     revealCards: vi.fn(),
     advanceRound: vi.fn(),
     submitDiagnosis: vi.fn(),
+    chooseCluePilePenalty: vi.fn(),
     playAgain: vi.fn(),
   };
 }
@@ -268,6 +272,25 @@ describe("competitive card-game UI", () => {
     expect(opponentCards.children).toHaveLength(3);
     expect(opponentCards.querySelectorAll('img[src$="/assets/meducktion-medical-duck-logo.webp"]')).toHaveLength(3);
     expect(screen.getByLabelText("Meducktion card table")).toBeInTheDocument();
+  });
+
+  it("covers hidden evidence and requires the first-miss pile choice", async () => {
+    const user = userEvent.setup();
+    const calls = actions();
+    render(
+      <CardApp
+        model={model("match", {
+          hiddenClueAnswers: ["yes"],
+          cluePilePenaltyChoiceRequired: true,
+        })}
+        actions={calls}
+      />,
+    );
+
+    expect(screen.getByLabelText("YES evidence, hidden")).toHaveTextContent("Clues hidden");
+    expect(screen.getByRole("dialog", { name: "Choose a pile to hide" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Hide NO clues" }));
+    expect(calls.chooseCluePilePenalty).toHaveBeenCalledWith("no");
   });
 
   it("shows a visible locked state without removing the hand", () => {

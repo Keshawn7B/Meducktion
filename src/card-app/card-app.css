@@ -1394,6 +1394,7 @@
 
 .status-locked { border-color: #91d5c5; color: #1e644f; background: #def5ed; }
 .status-diagnosed { border-color: #b8a8e7; color: #57417f; background: #eee8fb; }
+.status-eliminated { border-color: #d79a9a; color: #752d2d; background: #fbe5e5; }
 .status-reconnecting { border-color: #e4a45e; color: #754315; background: #fff0d6; }
 
 .privacy-note {
@@ -1693,6 +1694,31 @@
 
 .diagnosis-choices label > span { font-size: 1.3rem; }
 .diagnosis-choices label > strong { line-height: 1.15; }
+
+.penalty-pile-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-top: 1.25rem;
+}
+
+.deduction-pile.is-hidden {
+  border-style: dashed;
+  filter: saturate(0.45);
+}
+
+.hidden-evidence-pile {
+  display: grid;
+  min-height: 6.5rem;
+  place-content: center;
+  padding: 1rem;
+  border-radius: 0.8rem;
+  color: #4e5963;
+  background: repeating-linear-gradient(135deg, #dfe4e6 0 0.7rem, #cfd6d9 0.7rem 1.4rem);
+  text-align: center;
+}
+
+.hidden-evidence-pile p { margin: 0.35rem 0 0; font-size: 0.75rem; }
 
 .diagnosis-clues {
   display: grid;

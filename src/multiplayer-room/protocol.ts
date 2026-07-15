@@ -99,9 +99,11 @@ export function applyRoomCommand(room: MultiplayerRoom, uid: string, envelope: C
     const everyPlayerDecided = state.playerOrder.every((playerId) => {
       const player = state.players[playerId];
       return !player ||
-        player.finalDiagnosisSubmitted ||
-        player.diagnosisSubmissions.some((submission) => submission.round === state.currentRound) ||
-        (state.diagnosisPassedPlayerIds ?? []).includes(playerId);
+        (!player.pendingCluePenaltyChoice && (
+          player.finalDiagnosisSubmitted ||
+          player.diagnosisSubmissions.some((submission) => submission.round === state.currentRound) ||
+          (state.diagnosisPassedPlayerIds ?? []).includes(playerId)
+        ));
     });
     if (!everyPlayerDecided) {
       throw new MultiplayerRoomError("SESSION_ERROR", "Every player must diagnose or keep investigating first.");

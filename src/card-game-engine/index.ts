@@ -80,6 +80,22 @@ export function getCompatibleCards(
   );
 }
 
+export function getDiagnosisConditionOptions(
+  content: CardCaseContent,
+  match: Pick<MatchState, "matchId" | "seed">,
+): CardCaseContent["conditions"] {
+  const orderSeed = [
+    "diagnosis-condition-order",
+    content.caseId,
+    match.seed,
+    match.matchId,
+  ].join(":");
+  return seededShuffle(
+    content.conditions,
+    createSeededRandomState(orderSeed),
+  ).values;
+}
+
 function assertContent(content: CardCaseContent): void {
   if (content.conditions.length !== 8) {
     throw new Error("A card match requires exactly eight conditions.");
@@ -201,6 +217,8 @@ function makePlayer(
     diagnosisAttemptsUsed: 0,
     diagnosisLockedUntilRound: null,
     diagnosisSubmissions: [],
+    hiddenClueAnswers: [],
+    pendingCluePenaltyChoice: false,
     correctDiagnosisRound: null,
     finalDiagnosisSubmitted: false,
     unhelpfulHandStreak: 0,
@@ -478,7 +496,7 @@ function activePlayers(state: MatchState): PlayerState[] {
     .map((playerId) => state.players[playerId])
     .filter(
       (player): player is PlayerState =>
-        player !== undefined && player.correctDiagnosisRound === null,
+        player !== undefined && !player.finalDiagnosisSubmitted,
     );
 }
 
@@ -888,7 +906,13 @@ function validateDiagnosis(
       message: "A correct diagnosis has already been submitted.",
     };
   }
-  if (player.diagnosisAttemptsUsed >= 2) {
+  if (player.pendingCluePenaltyChoice) {
+    return {
+      code: "CLUE_PILE_CHOICE_REQUIRED",
+      message: "Choose whether to hide your YES or NO clues first.",
+    };
+  }
+  if (player.diagnosisAttemptsUsed >= 3) {
     return {
       code: "DIAGNOSIS_ATTEMPTS_EXHAUSTED",
       message: "No diagnosis attempts remain.",
@@ -902,6 +926,29 @@ function validateDiagnosis(
     };
   }
   return null;
+}
+
+function hideCluePile(
+  state: MatchState,
+  events: MatchEvent[],
+  player: PlayerState,
+  answer: "yes" | "no",
+): void {
+  player.hiddenClueAnswers = Array.from(
+    new Set([...(player.hiddenClueAnswers ?? []), answer]),
+  );
+  player.pendingCluePenaltyChoice = false;
+  emit(state, events, "clue_pile_hidden", [player.id], { answer });
+}
+
+function resolveBotCluePenalty(
+  state: MatchState,
+  events: MatchEvent[],
+  player: PlayerState,
+): void {
+  if (!player.pendingCluePenaltyChoice) return;
+  const answer = chooseSeededFromBest(state, ["yes", "no"] as const);
+  if (answer !== null) hideCluePile(state, events, player, answer);
 }
 
 function submitDiagnosis(
@@ -940,16 +987,18 @@ function submitDiagnosis(
     player.diagnosisLockedUntilRound = null;
     emit(state, events, "diagnosis_correct", [player.id]);
   } else {
-    const removedClue = player.privateClues.at(-1);
-    if (removedClue !== undefined) {
-      player.privateClues = player.privateClues.filter(
-        (clue) => clue !== removedClue,
-      );
-    }
     player.diagnosisLockedUntilRound = state.currentRound + 1;
-    player.finalDiagnosisSubmitted = player.diagnosisAttemptsUsed >= 2;
+    if (player.diagnosisAttemptsUsed === 1) {
+      player.pendingCluePenaltyChoice = true;
+    } else if (player.diagnosisAttemptsUsed === 2) {
+      hideCluePile(state, events, player, "yes");
+      hideCluePile(state, events, player, "no");
+    } else {
+      player.finalDiagnosisSubmitted = true;
+      emit(state, events, "player_eliminated", [player.id]);
+    }
     emit(state, events, "diagnosis_incorrect", [player.id], {
-      removedClueId: removedClue?.clueId ?? null,
+      attempt: player.diagnosisAttemptsUsed,
     });
   }
   return null;
@@ -1028,6 +1077,7 @@ function autoDiagnoseBots(
         candidate.conditionId,
         candidate.clueIds,
       );
+      resolveBotCluePenalty(state, events, player);
       if (player.correctDiagnosisRound !== null) return;
     }
   }
@@ -1102,6 +1152,32 @@ export function transitionCardGame(
   }
   const state = structuredClone(original);
   const events: MatchEvent[] = [];
+
+  const commandPlayer = "playerId" in command
+    ? state.players[command.playerId]
+    : undefined;
+  if (
+    commandPlayer?.pendingCluePenaltyChoice === true &&
+    command.type !== "CHOOSE_CLUE_PILE_PENALTY" &&
+    command.type !== "CONVERT_TO_BOT"
+  ) {
+    return fail(
+      original,
+      "CLUE_PILE_CHOICE_REQUIRED",
+      "Choose whether to hide your YES or NO clues first.",
+      commandPlayer.id,
+    );
+  }
+  if (
+    !("playerId" in command) &&
+    Object.values(state.players).some((player) => player.pendingCluePenaltyChoice)
+  ) {
+    return fail(
+      original,
+      "CLUE_PILE_CHOICE_REQUIRED",
+      "A player must choose which clue pile to hide first.",
+    );
+  }
 
   if (command.type === "START_MATCH") {
     if (state.phase !== "match_intro") {
@@ -1295,7 +1371,9 @@ export function transitionCardGame(
     state.latestPlays = plays;
     resolveSharedEvent(content, state, events);
     state.acknowledgedRevealPlayerIds = state.playerOrder.filter(
-      (playerId) => state.players[playerId]?.kind === "bot",
+      (playerId) =>
+        state.players[playerId]?.kind === "bot" ||
+        state.players[playerId]?.finalDiagnosisSubmitted === true,
     );
     state.phase = "card_reveal";
     return complete(original, state, events);
@@ -1335,6 +1413,18 @@ export function transitionCardGame(
     return complete(original, state, events);
   }
 
+  if (command.type === "CHOOSE_CLUE_PILE_PENALTY") {
+    const player = state.players[command.playerId];
+    if (player === undefined) {
+      return fail(original, "UNKNOWN_PLAYER", "Unknown player.", command.playerId);
+    }
+    if (!player.pendingCluePenaltyChoice) {
+      return fail(original, "INVALID_COMMAND", "There is no clue-pile penalty to choose.");
+    }
+    hideCluePile(state, events, player, command.answer);
+    return complete(original, state, events);
+  }
+
   if (command.type === "CONVERT_TO_BOT") {
     const player = state.players[command.playerId];
     if (player === undefined) {
@@ -1346,6 +1436,7 @@ export function transitionCardGame(
     player.kind = "bot";
     player.botStyle = "balanced";
     emit(state, events, "player_replaced_by_bot", [command.playerId]);
+    resolveBotCluePenalty(state, events, player);
 
     if (state.phase === "card_selection" && player.correctDiagnosisRound === null) {
       autoLockBots(content, state, events);
@@ -1397,7 +1488,7 @@ export function transitionCardGame(
     if (
       state.currentRound >= state.maximumRounds &&
       player.correctDiagnosisRound === null &&
-      player.diagnosisAttemptsUsed < 2
+      player.diagnosisAttemptsUsed < 3
     ) {
       return fail(
         original,
@@ -1442,6 +1533,12 @@ export function transitionCardGame(
       finishMatch(content, state, events, winnerPlayerId);
       return complete(original, state, events);
     }
+    const remainingPlayers = activePlayers(state);
+    if (remainingPlayers.length === 1 && state.playerOrder.length > 1) {
+      finishMatch(content, state, events, remainingPlayers[0]!.id);
+      if (state.result) state.result.winningTieBreak = "only_player";
+      return complete(original, state, events);
+    }
     if (state.playerOrder.every((id) => state.players[id]?.finalDiagnosisSubmitted)) {
       finishMatch(content, state, events);
     }
@@ -1460,7 +1557,7 @@ export function transitionCardGame(
               (player) =>
                 player?.kind === "human" &&
                 player.correctDiagnosisRound === null &&
-                player.diagnosisAttemptsUsed < 2 &&
+                player.diagnosisAttemptsUsed < 3 &&
                 !player.diagnosisSubmissions.some(
                   (submission) => submission.round === state.currentRound,
                 ),
@@ -1478,6 +1575,12 @@ export function transitionCardGame(
     const winnerPlayerId = firstCorrectPlayerId(state);
     if (winnerPlayerId !== null) {
       finishMatch(content, state, events, winnerPlayerId);
+      return complete(original, state, events);
+    }
+    const remainingPlayers = activePlayers(state);
+    if (remainingPlayers.length === 1 && state.playerOrder.length > 1) {
+      finishMatch(content, state, events, remainingPlayers[0]!.id);
+      if (state.result) state.result.winningTieBreak = "only_player";
       return complete(original, state, events);
     }
     if (
@@ -1536,7 +1639,7 @@ export function isDiagnosisAvailable(
     (state.phase === "diagnosis_window" || state.phase === "card_selection") &&
     player !== undefined &&
     !player.finalDiagnosisSubmitted &&
-    player.diagnosisAttemptsUsed < 2 &&
+    player.diagnosisAttemptsUsed < 3 &&
     (player.diagnosisLockedUntilRound === null ||
       state.currentRound >= player.diagnosisLockedUntilRound)
   );

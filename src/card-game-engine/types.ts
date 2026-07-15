@@ -100,6 +100,8 @@ export interface PlayerState {
   diagnosisAttemptsUsed: number;
   diagnosisLockedUntilRound: number | null;
   diagnosisSubmissions: DiagnosisSubmission[];
+  hiddenClueAnswers: Array<"yes" | "no">;
+  pendingCluePenaltyChoice: boolean;
   correctDiagnosisRound: number | null;
   finalDiagnosisSubmitted: boolean;
   unhelpfulHandStreak: number;
@@ -158,6 +160,8 @@ export interface MatchEvent {
     | "player_replaced_by_bot"
     | "diagnosis_incorrect"
     | "diagnosis_correct"
+    | "clue_pile_hidden"
+    | "player_eliminated"
     | "next_round_ready"
     | "round_started"
     | "match_completed";
@@ -214,6 +218,7 @@ export type CardGameCommand =
       conditionId: string;
       clueIds: readonly string[];
     }
+  | { type: "CHOOSE_CLUE_PILE_PENALTY"; playerId: string; answer: "yes" | "no" }
   | { type: "PASS_DIAGNOSIS"; playerId: string }
   | { type: "CONVERT_TO_BOT"; playerId: string }
   | { type: "CONTINUE_FROM_DIAGNOSIS" }
@@ -235,6 +240,7 @@ export type CardGameErrorCode =
   | "DIAGNOSIS_ATTEMPTS_EXHAUSTED"
   | "DIAGNOSIS_ALREADY_CORRECT"
   | "DIAGNOSIS_REQUIRED"
+  | "CLUE_PILE_CHOICE_REQUIRED"
   | "UNKNOWN_CONDITION"
   | "INVALID_SUPPORTING_CLUES"
   | "UNKNOWN_CONTENT";

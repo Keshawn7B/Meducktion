@@ -24,6 +24,7 @@ import type {
 import {
   createCardMatch,
   createSeededRandomState,
+  getDiagnosisConditionOptions,
   isDiagnosisAvailable,
   seededChoice,
 } from "../card-game-engine";
@@ -198,6 +199,9 @@ export function buildCardAppModel(
 ): CardAppModel {
   const state = session?.matchState;
   const human = state?.players[playerId];
+  const diagnosisConditions = state
+    ? getDiagnosisConditionOptions(content, state)
+    : content.conditions;
   const visibleScreen =
     requestedScreen === "match" && state?.phase === "match_complete"
       ? "results"
@@ -312,7 +316,7 @@ export function buildCardAppModel(
       startingSymptom:
         startingClue?.displayText ?? "Jordan's stomach pain began earlier today.",
     },
-    conditions: content.conditions.map((condition) => ({
+    conditions: diagnosisConditions.map((condition) => ({
       id: condition.id,
       displayName: condition.displayName,
       icon: iconForCondition(condition.iconKey),
@@ -344,6 +348,8 @@ export function buildCardAppModel(
         }) ?? [],
       publicClues,
       privateClues,
+      hiddenClueAnswers: human?.hiddenClueAnswers ?? [],
+      cluePilePenaltyChoiceRequired: human?.pendingCluePenaltyChoice ?? false,
       opponents:
         state?.playerOrder
           .filter((opponentId) => opponentId !== playerId)
@@ -353,7 +359,9 @@ export function buildCardAppModel(
               (play) => play.playerId === opponentId,
             );
             const status = opponent?.finalDiagnosisSubmitted
-              ? ("diagnosed" as const)
+              ? opponent.correctDiagnosisRound === null
+                ? ("eliminated" as const)
+                : ("diagnosed" as const)
               : opponent?.hand.locked
                 ? ("locked" as const)
                 : state.phase === "card_reveal" ||
@@ -386,6 +394,10 @@ export function buildCardAppModel(
           const clue = reveal
             ? clueDefinition(content, reveal.clueId)
             : undefined;
+          const clueHiddenByPenalty =
+            play.playerId === playerId &&
+            clue !== undefined &&
+            (human?.hiddenClueAnswers ?? []).includes(clue.answer);
           const playedCard = content.cards.find((card) => card.id === play.cardId);
           const effectText = playedCard?.result.type === "special"
             ? playedCard.result.effect.type === "swap_one_card"
@@ -399,7 +411,7 @@ export function buildCardAppModel(
             playerName: owner?.displayName ?? "Player",
             cardTitle: play.displayName,
             category: play.category,
-            ...(clue
+            ...(clue && !clueHiddenByPenalty
               ? {
                   clue: {
                     id: clue.id,
@@ -413,8 +425,8 @@ export function buildCardAppModel(
                 }
               : {}),
             clueIsHidden:
-              play.playerId !== playerId &&
-              play.visibility === "private",
+              clueHiddenByPenalty ||
+              (play.playerId !== playerId && play.visibility === "private"),
             ...(effectText ? { effectText } : {}),
           };
         }) ?? [],
@@ -431,29 +443,37 @@ export function buildCardAppModel(
         state !== undefined && isDiagnosisAvailable(state, playerId),
       diagnosisAttemptsRemaining: Math.max(
         0,
-        2 - (human?.diagnosisAttemptsUsed ?? 0),
+        3 - (human?.diagnosisAttemptsUsed ?? 0),
       ),
       diagnosisBlockedUntilNextRound:
         human?.diagnosisLockedUntilRound !== null &&
         human?.diagnosisLockedUntilRound !== undefined &&
         (state?.currentRound ?? 0) < human.diagnosisLockedUntilRound,
       humanHasDiagnosed: human?.correctDiagnosisRound != null,
+      humanEliminated:
+        human?.finalDiagnosisSubmitted === true &&
+        human.correctDiagnosisRound === null,
       mustDiagnose:
         state?.phase === "diagnosis_window" &&
         state.currentRound >= state.maximumRounds &&
         human !== undefined &&
         human.correctDiagnosisRound === null &&
-        human.diagnosisAttemptsUsed < 2 &&
+        human.diagnosisAttemptsUsed < 3 &&
+        !human.pendingCluePenaltyChoice &&
         !human.diagnosisSubmissions.some(
           (submission) => submission.round === state.currentRound,
         ),
       canLock:
         state?.phase === "card_selection" &&
         human?.correctDiagnosisRound === null &&
+        human?.finalDiagnosisSubmitted === false &&
+        !human?.pendingCluePenaltyChoice &&
         !human.hand.locked,
       canUnlock:
         state?.phase === "card_selection" &&
         human?.correctDiagnosisRound === null &&
+        human?.finalDiagnosisSubmitted === false &&
+        !human?.pendingCluePenaltyChoice &&
         human.hand.locked,
       canReveal:
         state?.phase === "cards_locked" ||
@@ -463,12 +483,15 @@ export function buildCardAppModel(
         state?.phase === "card_reveal" ? "Review Clues" : "Reveal Cards",
       canAdvance:
         state?.phase === "diagnosis_window" &&
+        human?.finalDiagnosisSubmitted !== true &&
+        !human?.pendingCluePenaltyChoice &&
         !(state.diagnosisPassedPlayerIds ?? []).includes(playerId) &&
         !(
           state.currentRound >= state.maximumRounds &&
           human !== undefined &&
           human.correctDiagnosisRound === null &&
-          human.diagnosisAttemptsUsed < 2 &&
+          human.diagnosisAttemptsUsed < 3 &&
+          !human.pendingCluePenaltyChoice &&
           !human.diagnosisSubmissions.some(
             (submission) => submission.round === state.currentRound,
           )
@@ -582,7 +605,11 @@ export function useCardMatch(): CardMatchController {
       setMessage(
         latest.correct
           ? "Correct diagnosis. You won the match."
-          : "That diagnosis was incorrect. Your newest answer was removed, and you can try again next round.",
+          : next.matchState.players[HUMAN_PLAYER_ID]?.diagnosisAttemptsUsed === 1
+            ? "Incorrect. Choose whether to hide your YES or NO clues."
+            : next.matchState.players[HUMAN_PLAYER_ID]?.finalDiagnosisSubmitted
+              ? "Incorrect. That was your third guess, so you are out of the match."
+              : "Incorrect. Both clue piles are now hidden until the match ends.",
       );
     }
   }
@@ -664,6 +691,14 @@ export function useCardMatch(): CardMatchController {
       setScreen(screenForSession(next));
     },
     submitDiagnosis,
+    chooseCluePilePenalty: (answer) =>
+      void withCurrent([
+        {
+          type: "CHOOSE_CLUE_PILE_PENALTY",
+          playerId: HUMAN_PLAYER_ID,
+          answer,
+        },
+      ]),
     playAgain: () => {
       resetCardMatch(storage);
       setSession(null);

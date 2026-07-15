@@ -48,7 +48,7 @@ export interface OpponentView {
   readonly displayName: string;
   readonly styleLabel: string;
   readonly avatar?: string;
-  readonly status: "choosing" | "locked" | "reviewing" | "diagnosed" | "reconnecting";
+  readonly status: "choosing" | "locked" | "reviewing" | "diagnosed" | "eliminated" | "reconnecting";
   readonly playedCategory?: CardCategory;
 }
 
@@ -118,6 +118,8 @@ export interface CardAppModel {
     readonly hand: readonly CardView[];
     readonly publicClues: readonly ClueView[];
     readonly privateClues: readonly ClueView[];
+    readonly hiddenClueAnswers: readonly ("yes" | "no")[];
+    readonly cluePilePenaltyChoiceRequired: boolean;
     readonly opponents: readonly OpponentView[];
     readonly latestReveals: readonly CardRevealView[];
     readonly sharedEvent?: {
@@ -129,6 +131,7 @@ export interface CardAppModel {
     readonly diagnosisAttemptsRemaining: number;
     readonly diagnosisBlockedUntilNextRound: boolean;
     readonly humanHasDiagnosed: boolean;
+    readonly humanEliminated: boolean;
     readonly mustDiagnose: boolean;
     readonly canLock: boolean;
     readonly canUnlock: boolean;
@@ -170,6 +173,7 @@ export interface CardAppActions {
   readonly revealCards: () => void;
   readonly advanceRound: () => void;
   readonly submitDiagnosis: (input: DiagnosisInput) => void;
+  readonly chooseCluePilePenalty: (answer: "yes" | "no") => void;
   readonly playAgain: () => void;
 }
 

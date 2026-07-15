@@ -2,9 +2,9 @@
 
 ## Current race rules and expanded case catalog
 
-Meducktion now uses a direct deduction race instead of point scoring. A player may diagnose during any card-selection or diagnosis window, including Round 1. The first correct diagnosis ends the match immediately and is the sole winner. Submission order matters only when a correct command is accepted; there is no score calculation or first-place tie. A wrong diagnosis removes that player's newest private answer, consumes one of two attempts, and blocks another guess until the next round.
+Meducktion now uses a direct deduction race instead of point scoring. A player may diagnose during any card-selection or diagnosis window, including Round 1. The first correct diagnosis ends the match immediately and is the sole winner. Submission order matters only when a correct command is accepted; there is no score calculation or first-place tie. On the first wrong diagnosis, the player chooses whether to hide their YES or NO evidence pile. The second wrong diagnosis hides both piles. The third eliminates that player. Each wrong guess blocks another attempt until the next round.
 
-The authored draft catalog contains 25 fictional scenarios. Every scenario presents eight plausible, deliberately overlapping possibilities and uses the same 24 generic symptom and homeostasis questions. Four core conditions are authored per scenario; four additional distractors are selected deterministically from the most similar symptom profiles. Every question produces a private YES or NO answer. Each player deck contains exactly one copy of each question, so a player cannot draw a duplicate card during a match. The consistent vocabulary is intentional: players learn the deck while different combinations of answers create the deduction challenge. With two attempts among eight choices, blind guessing can cover only 25% of the diagnosis pool.
+The authored draft catalog contains 25 fictional scenarios. Every scenario presents eight plausible, deliberately overlapping possibilities and uses the same 24 generic symptom and homeostasis questions. Four core conditions are authored per scenario; four additional distractors are selected deterministically from the most similar symptom profiles. The eight choices are shuffled from the match seed, so the answer position varies between matches while remaining identical for every player and stable after refresh. Every question produces a private YES or NO answer. Each player deck contains exactly one copy of each question, so a player cannot draw a duplicate card during a match. The consistent vocabulary is intentional: players learn the deck while different combinations of answers create the deduction challenge. Three blind guesses can cover at most 37.5% of the diagnosis pool, with escalating evidence loss after each miss.
 
 Players do not choose from or preview named scenarios. Local matches draw a case from the 25-case catalog using the match seed, and online rooms derive the same hidden draw from the room code so every client receives the identical case. The patient and mystery are revealed only after the match starts; authored case titles remain internal content metadata.
 
@@ -97,7 +97,7 @@ It should not feel like a medical-school examination, hospital simulator, electr
 2. Choose one Ask, Check, or Test question, then lock it.
 3. After everyone locks, reveal the cards and privately sort each answer into YES or NO.
 4. Diagnose whenever you are ready by choosing one of eight conditions.
-5. A wrong diagnosis removes your newest answer and uses one of two attempts.
+5. The first miss hides one chosen evidence pile; the second hides both; the third eliminates you.
 6. The first correct diagnosis wins immediately.
 
 The canonical loop is:
@@ -114,7 +114,7 @@ Meet the patient
 → first correct diagnosis wins
 ```
 
-Current defaults are 2–4 player-compatible rules, one human versus one Balanced bot for local testing, four rounds, a three-card hand, one card per player per round, diagnosis from Round 1, no strict timer, and no more than two diagnosis attempts. The target match length is 6–10 minutes.
+Current defaults are 2–4 player-compatible rules, one human versus one Balanced bot for local testing, four rounds, a three-card hand, one card per player per round, diagnosis from Round 1, no strict timer, and no more than three diagnosis attempts. The target match length is 6–10 minutes.
 
 ## Card categories
 
@@ -164,13 +164,13 @@ match_intro
 → match_complete
 ```
 
-Selection may change before locking and never reveals an answer. All active players must lock before resolution. Reveal places a private YES or NO answer for each played question and draws active hands back to three. A player who uses both attempts without solving the case may keep investigating but cannot diagnose again.
+Selection may change before locking and never reveals an answer. All active players must lock before resolution. Reveal places a private YES or NO answer for each played question and draws active hands back to three. A player eliminated by a third wrong diagnosis no longer participates in card rounds.
 
 The match ends immediately when the first correct diagnosis command is accepted. If nobody solves it by the final required calls, the case ends without a winner. Completion reveals the authored answer, investigation paths, winner feedback, and a beginner-friendly educational explanation.
 
 ## Diagnosis and victory
 
-A diagnosis submission contains one of the eight match conditions. It is available whenever the player is choosing a card or the diagnosis window is open. The first correct submission ends the match and names exactly one winner. A wrong attempt removes the player's newest private answer, blocks another attempt until the next round, and the second wrong attempt exhausts diagnosis attempts. There are no points or score-based tie breakers.
+A diagnosis submission contains one of the eight match conditions. It is available whenever the player is choosing a card or the diagnosis window is open. The first correct submission ends the match and names exactly one winner. After the first wrong attempt, the player must choose a YES or NO pile to hide before play can continue. The second wrong attempt hides both piles automatically. The third eliminates the player; if only one player remains, that player wins. There are no points or score-based tie breakers.
 
 ## Local bot behavior
 

@@ -5,6 +5,7 @@ import {
 } from "../card-content";
 import {
   createCardMatch,
+  getDiagnosisConditionOptions,
   getPlayerMatchView,
   isDiagnosisAvailable,
   knownClueIdsForPlayer,
@@ -198,6 +199,29 @@ describe("seeded match creation and decks", () => {
       }),
     );
     expect(openings.size).toBeGreaterThan(1);
+  });
+
+  it("shuffles diagnosis choices deterministically instead of pinning the answer first", () => {
+    const answerPositions = new Set<number>();
+
+    for (let index = 0; index < 64; index += 1) {
+      const state = createCardMatch(content, { seed: `condition-order-${index}` });
+      const first = getDiagnosisConditionOptions(content, state);
+      const second = getDiagnosisConditionOptions(content, state);
+
+      expect(second.map((condition) => condition.id)).toEqual(
+        first.map((condition) => condition.id),
+      );
+      expect(new Set(first.map((condition) => condition.id))).toEqual(
+        new Set(content.conditions.map((condition) => condition.id)),
+      );
+      answerPositions.add(
+        first.findIndex((condition) => condition.id === content.correctConditionId),
+      );
+    }
+
+    expect(answerPositions.size).toBeGreaterThan(4);
+    expect(answerPositions).not.toEqual(new Set([0]));
   });
 
   it("guarantees Ask, Check, and Test-or-Special in every opening hand", () => {
@@ -509,7 +533,7 @@ describe("diagnosis race", () => {
     expect(isDiagnosisAvailable(state, "player.one")).toBe(true);
   });
 
-  it("removes the newest private answer after a wrong Round 1 guess", () => {
+  it("keeps clues but requires a YES or NO pile choice after the first wrong guess", () => {
     const state = diagnosisState(1);
     const before = state.players["player.one"]?.privateClues.length;
     const result = transitionCardGame(content, state, {
@@ -519,7 +543,8 @@ describe("diagnosis race", () => {
       clueIds: [],
     });
     expect(result.errors).toEqual([]);
-    expect(result.state.players["player.one"]?.privateClues).toHaveLength((before ?? 0) - 1);
+    expect(result.state.players["player.one"]?.privateClues).toHaveLength(before ?? 0);
+    expect(result.state.players["player.one"]?.pendingCluePenaltyChoice).toBe(true);
     expect(result.state.players["player.one"]?.diagnosisLockedUntilRound).toBe(2);
   });
 
@@ -548,7 +573,7 @@ describe("diagnosis race", () => {
     expect(condition.errors[0]?.code).toBe("UNKNOWN_CONDITION");
   });
 
-  it("applies a wrong attempt, blocks the same round, and exhausts the second", () => {
+  it("hides one chosen pile, then both piles, then eliminates on the third miss", () => {
     let state = diagnosisState();
     state = run(state, {
       type: "SUBMIT_DIAGNOSIS",
@@ -557,17 +582,27 @@ describe("diagnosis race", () => {
       clueIds: supportClues,
     });
     expect(state.players["player.one"]?.diagnosisAttemptsUsed).toBe(1);
-    expect(
-      state.eventLog.find((event) => event.type === "diagnosis_incorrect")?.payload
-        .removedClueId,
-    ).toBe(supportClues[1]);
+    expect(state.players["player.one"]?.pendingCluePenaltyChoice).toBe(true);
     const blocked = transitionCardGame(content, state, {
       type: "SUBMIT_DIAGNOSIS",
       playerId: "player.one",
       conditionId: "diagnosis.urinary-tract-infection",
       clueIds: supportClues,
     });
-    expect(blocked.errors[0]?.code).toBe("DIAGNOSIS_LOCKED");
+    expect(blocked.errors[0]?.code).toBe("CLUE_PILE_CHOICE_REQUIRED");
+    state = run(state, {
+      type: "CHOOSE_CLUE_PILE_PENALTY",
+      playerId: "player.one",
+      answer: "yes",
+    });
+    expect(state.players["player.one"]?.hiddenClueAnswers).toEqual(["yes"]);
+    const roundBlocked = transitionCardGame(content, state, {
+      type: "SUBMIT_DIAGNOSIS",
+      playerId: "player.one",
+      conditionId: "diagnosis.urinary-tract-infection",
+      clueIds: supportClues,
+    });
+    expect(roundBlocked.errors[0]?.code).toBe("DIAGNOSIS_LOCKED");
     state.currentRound = 3;
     state = run(state, {
       type: "SUBMIT_DIAGNOSIS",
@@ -576,25 +611,19 @@ describe("diagnosis race", () => {
       clueIds: supportClues,
     });
     expect(state.players["player.one"]?.diagnosisAttemptsUsed).toBe(2);
-    expect(state.players["player.one"]?.finalDiagnosisSubmitted).toBe(true);
-    state.phase = "card_selection";
-    const exhaustedPlayer = state.players["player.one"];
-    if (exhaustedPlayer === undefined) {
-      throw new Error("Missing exhausted player.");
-    }
-    const card = exhaustedPlayer?.deck.drawPile.shift();
-    if (card === undefined) {
-      throw new Error("Missing exhausted player's card.");
-    }
-    exhaustedPlayer.hand.cards.push(card);
+    expect(state.players["player.one"]?.hiddenClueAnswers).toEqual(["yes", "no"]);
+    expect(state.players["player.one"]?.finalDiagnosisSubmitted).toBe(false);
+    state.currentRound = 4;
     state = run(state, {
-      type: "SELECT_CARD",
+      type: "SUBMIT_DIAGNOSIS",
       playerId: "player.one",
-      cardInstanceId: card.instanceId,
+      conditionId: "diagnosis.kidney-stone",
+      clueIds: supportClues,
     });
-    expect(state.players["player.one"]?.hand.selectedCardInstanceId).toBe(
-      card.instanceId,
-    );
+    expect(state.players["player.one"]?.diagnosisAttemptsUsed).toBe(3);
+    expect(state.players["player.one"]?.finalDiagnosisSubmitted).toBe(true);
+    expect(state.phase).toBe("match_complete");
+    expect(state.result?.winnerPlayerIds).toEqual(["player.two"]);
   });
 
   it("requires an available final diagnosis before the match can finish", () => {
@@ -660,6 +689,11 @@ describe("diagnosis race", () => {
       clueIds: supportClues,
     });
     state.currentRound = 3;
+    state = run(state, {
+      type: "CHOOSE_CLUE_PILE_PENALTY",
+      playerId: "player.one",
+      answer: "no",
+    });
     const player = state.players["player.one"];
     const opponent = state.players["player.two"];
     const irrelevant = content.cards.find(

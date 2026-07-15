@@ -63,7 +63,7 @@ const tutorialPanels = [
   {
     eyebrow: "Make your diagnosis",
     title: "Guess whenever you are ready",
-    body: "You may diagnose during any round. A wrong guess removes your newest answer and uses one of your two attempts.",
+    body: "You have three guesses. After the first miss, choose a clue pile to hide. After the second, both piles are hidden. A third miss eliminates you.",
     symbol: "?",
   },
   {
@@ -457,7 +457,7 @@ function MatchScreen({
                   <small>{opponent.styleLabel} opponent</small>
                 </div>
                 <span className={`status-pill status-${opponent.status}`}>
-                  {opponent.status === "locked" ? "Locked" : opponent.status === "diagnosed" ? "Diagnosed" : opponent.status === "reconnecting" ? "Reconnecting" : opponent.status === "reviewing" ? "Waiting" : "Choosing"}
+                  {opponent.status === "locked" ? "Locked" : opponent.status === "diagnosed" ? "Diagnosed" : opponent.status === "eliminated" ? "Out" : opponent.status === "reconnecting" ? "Reconnecting" : opponent.status === "reviewing" ? "Waiting" : "Choosing"}
                 </span>
                 <div className="opponent-card-backs" aria-label="Three face-down opponent cards">
                   {[0, 1, 2].map((index) => (
@@ -535,7 +535,7 @@ function MatchScreen({
         <section id="player-hand" className="hand-dock" aria-labelledby="hand-title">
           <div id="private-evidence" className="private-clue-zone player-private-clues" aria-labelledby="private-clue-title">
             <div><h3 id="private-clue-title">Your YES / NO evidence</h3><span>{match.privateClues.length} answers</span></div>
-            <DeductionPiles clues={match.privateClues} />
+            <DeductionPiles clues={match.privateClues} hiddenAnswers={match.hiddenClueAnswers} />
           </div>
           <div className="hand-heading">
             <div>
@@ -559,7 +559,14 @@ function MatchScreen({
               That diagnosis was incorrect. You can try again next round.
             </p>
           )}
-          {match.humanHasDiagnosed ? (
+          {match.humanEliminated ? (
+            <div className="spectator-card">
+              <div>
+                <strong>You are out of the match.</strong>
+                <p>Your third diagnosis was incorrect. Watch to see who solves the case.</p>
+              </div>
+            </div>
+          ) : match.humanHasDiagnosed ? (
             <div className="spectator-card">
               <span aria-hidden="true">&#x2713;</span>
               <div>
@@ -627,6 +634,12 @@ function MatchScreen({
             actions.submitDiagnosis(input);
             setDiagnosisOpen(false);
           }}
+        />
+      )}
+      {match.cluePilePenaltyChoiceRequired && (
+        <CluePilePenaltyPanel
+          disabled={Boolean(onlineBlocked)}
+          onChoose={actions.chooseCluePilePenalty}
         />
       )}
     </>
@@ -710,8 +723,8 @@ function DiagnosisPanel({
           <strong>{model.match.diagnosisAttemptsRemaining} attempt(s)</strong> remaining.
         </p>
         <p className="consequence-note">
-          A wrong diagnosis removes your newest answer and uses an attempt. You
-          can try again in the next round.
+          First miss: choose one evidence pile to hide. Second miss: both piles
+          are hidden. Third miss: you are out of the match.
         </p>
         <form onSubmit={submit} noValidate>
           <fieldset className="diagnosis-choices">
@@ -978,7 +991,13 @@ function ClueList({ clues, empty }: { clues: readonly ClueView[]; empty: string 
   );
 }
 
-function DeductionPiles({ clues }: { clues: readonly ClueView[] }) {
+function DeductionPiles({
+  clues,
+  hiddenAnswers = [],
+}: {
+  clues: readonly ClueView[];
+  hiddenAnswers?: readonly ("yes" | "no")[];
+}) {
   const piles = (["yes", "no"] as const).map((answer) => ({
     answer,
     clues: clues.filter((clue) => clue.answer === answer),
@@ -987,9 +1006,14 @@ function DeductionPiles({ clues }: { clues: readonly ClueView[] }) {
   return (
     <div className="deduction-piles" aria-label="Revealed YES and NO evidence piles">
       {piles.map((pile) => (
-        <section className={`deduction-pile pile-${pile.answer}`} key={pile.answer} aria-label={`${pile.answer.toUpperCase()} evidence`}>
-          <header><strong>{pile.answer.toUpperCase()}</strong><span>{pile.clues.length}</span></header>
-          {pile.clues.length === 0 ? <p>No answers yet</p> : pile.clues.map((clue) => (
+        <section className={`deduction-pile pile-${pile.answer}${hiddenAnswers.includes(pile.answer) ? " is-hidden" : ""}`} key={pile.answer} aria-label={`${pile.answer.toUpperCase()} evidence${hiddenAnswers.includes(pile.answer) ? ", hidden" : ""}`}>
+          <header><strong>{pile.answer.toUpperCase()}</strong><span>{hiddenAnswers.includes(pile.answer) ? "Hidden" : pile.clues.length}</span></header>
+          {hiddenAnswers.includes(pile.answer) ? (
+            <div className="hidden-evidence-pile" role="status">
+              <strong>Clues hidden</strong>
+              <p>This pile was covered after an incorrect diagnosis.</p>
+            </div>
+          ) : pile.clues.length === 0 ? <p>No answers yet</p> : pile.clues.map((clue) => (
             <article className={clue.isNew ? "is-new" : ""} key={clue.id}>
               <small>{clue.question ?? "Evidence"}</small>
               <strong>{clue.title.replace(/^Yes\s*[—-]\s*|^No\s*[—-]\s*/i, "")}</strong>
@@ -998,6 +1022,30 @@ function DeductionPiles({ clues }: { clues: readonly ClueView[] }) {
         </section>
       ))}
       {unassigned.length > 0 && <ClueList clues={unassigned} empty="" />}
+    </div>
+  );
+}
+
+function CluePilePenaltyPanel({
+  disabled,
+  onChoose,
+}: {
+  disabled: boolean;
+  onChoose: (answer: "yes" | "no") => void;
+}) {
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => titleRef.current?.focus(), []);
+  return (
+    <div className="modal-backdrop">
+      <section className="diagnosis-panel penalty-panel" role="dialog" aria-modal="true" aria-labelledby="penalty-title">
+        <p className="playful-kicker">Incorrect diagnosis</p>
+        <h2 id="penalty-title" ref={titleRef} tabIndex={-1}>Choose a pile to hide</h2>
+        <p>Your first miss covers one evidence pile for the rest of this match. Future clues in that pile will also stay hidden.</p>
+        <div className="penalty-pile-actions">
+          <button className="button button-primary button-large" disabled={disabled} onClick={() => onChoose("yes")}>Hide YES clues</button>
+          <button className="button button-primary button-large" disabled={disabled} onClick={() => onChoose("no")}>Hide NO clues</button>
+        </div>
+      </section>
     </div>
   );
 }

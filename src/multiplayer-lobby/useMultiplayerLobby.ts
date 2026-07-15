@@ -334,9 +334,11 @@ export function useMultiplayerLobby(onExit?: () => void): MultiplayerLobbyContro
     return state.playerOrder.every((playerId) => {
       const player = state.players[playerId];
       return !player ||
-        player.finalDiagnosisSubmitted ||
-        player.diagnosisSubmissions.some((submission) => submission.round === state.currentRound) ||
-        (state.diagnosisPassedPlayerIds ?? []).includes(playerId);
+        (!player.pendingCluePenaltyChoice && (
+          player.finalDiagnosisSubmitted ||
+          player.diagnosisSubmissions.some((submission) => submission.round === state.currentRound) ||
+          (state.diagnosisPassedPlayerIds ?? []).includes(playerId)
+        ));
     });
   }
 
@@ -471,6 +473,14 @@ export function useMultiplayerLobby(onExit?: () => void): MultiplayerLobbyContro
             clueIds: input.clueIds,
           });
           await continueWhenReady(submitted);
+        }),
+        chooseCluePilePenalty: (answer) => void performMatch(async () => {
+          const chosen = await sendCommand(room, {
+            type: "CHOOSE_CLUE_PILE_PENALTY",
+            playerId: uid,
+            answer,
+          });
+          await continueWhenReady(chosen);
         }),
         playAgain: () => void performMatch(async () => {
           const reset = await repository().resetRoom(room.roomId, uid);
