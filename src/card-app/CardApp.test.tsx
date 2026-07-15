@@ -6,7 +6,10 @@ import "@testing-library/jest-dom/vitest";
 import { CardApp, MEDUCKTION_DISCLAIMER, MEDUCKTION_TAGLINE } from "./CardApp";
 import type { CardAppActions, CardAppModel } from "./types";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 const conditions = [
   { id: "condition.appendicitis", displayName: "Appendicitis", icon: "A", learnMore: "Irritation of the appendix." },
@@ -123,6 +126,7 @@ function model(screen: CardAppModel["screen"], patch?: Partial<CardAppModel["mat
       mustDiagnose: false,
       canLock: true,
       canReveal: false,
+      revealActionLabel: "Reveal Cards",
       canAdvance: false,
       statusMessage: "Choose one card, then lock it in.",
       ...patch,
@@ -169,6 +173,8 @@ describe("competitive card-game UI", () => {
     expect(document.querySelector(".brand-mark")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "Solve the case before your opponents." })).toBeInTheDocument();
     expect(screen.getByText(MEDUCKTION_DISCLAIMER)).toBeInTheDocument();
+    expect(screen.getByLabelText("Meducktion medical duck mascot").querySelector('img[src$="/assets/meducktion-medical-duck-logo.webp"]')).toBeInTheDocument();
+    expect(document.querySelector('img[src$="/assets/patient-jordan-lee.webp"]')).not.toBeInTheDocument();
     expect(screen.queryByText(/care budget|stability|focus points/i)).not.toBeInTheDocument();
   });
 
@@ -240,7 +246,9 @@ describe("competitive card-game UI", () => {
     expect(screen.getAllByText("Private to you").length).toBeGreaterThan(0);
     expect(screen.getByText("Jordan has little appetite.")).toBeInTheDocument();
     expect(screen.getByText("Private clue collected")).toBeInTheDocument();
-    expect(screen.getByLabelText("Three face-down opponent cards").children).toHaveLength(3);
+    const opponentCards = screen.getByLabelText("Three face-down opponent cards");
+    expect(opponentCards.children).toHaveLength(3);
+    expect(opponentCards.querySelectorAll('img[src$="/assets/meducktion-medical-duck-logo.webp"]')).toHaveLength(3);
     expect(screen.getByLabelText("Meducktion card table")).toBeInTheDocument();
   });
 
@@ -269,6 +277,41 @@ describe("competitive card-game UI", () => {
     rerender(<CardApp model={model("match", { canLock: false, canReveal: true, phase: "cards_locked" })} actions={revealCalls} />);
     await user.click(screen.getByRole("button", { name: "Reveal Cards" }));
     expect(revealCalls.revealCards).toHaveBeenCalledOnce();
+  });
+
+  it("offers an explicit leave control only for online matches", async () => {
+    const user = userEvent.setup();
+    const leave = vi.fn();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const { rerender } = render(<CardApp model={model("match")} actions={actions()} />);
+    expect(screen.queryByRole("button", { name: "Leave Match" })).not.toBeInTheDocument();
+    rerender(<CardApp model={model("match")} actions={actions()} onLeaveMatch={leave} />);
+    await user.click(screen.getByRole("button", { name: "Leave Match" }));
+    expect(confirm).toHaveBeenCalledWith(expect.stringMatching(/bot will take over/i));
+    expect(leave).toHaveBeenCalledOnce();
+  });
+
+  it("shows online room health and blocks duplicate actions while syncing", () => {
+    const syncingModel: CardAppModel = {
+      ...model("match"),
+      online: { roomCode: "ABC234", isSyncing: true, isOffline: false },
+    };
+    render(<CardApp model={syncingModel} actions={actions()} />);
+    expect(screen.getByRole("status")).toHaveTextContent("Room ABC234 Syncing");
+    expect(screen.getByRole("button", { name: "Lock Card" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Diagnose" })).toBeDisabled();
+  });
+
+  it("shows when an online opponent is reconnecting", () => {
+    render(<CardApp model={model("match", {
+      opponents: [{
+        id: "player.bot",
+        displayName: "Bailey",
+        styleLabel: "Online player",
+        status: "reconnecting",
+      }],
+    })} actions={actions()} />);
+    expect(screen.getByText("Reconnecting")).toBeInTheDocument();
   });
 
   it("shows diagnosis timing and validates the simple diagnosis form", async () => {

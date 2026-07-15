@@ -38,6 +38,8 @@ describe("multiplayer lobby UI", () => {
     const calls = actions();
     render(<MultiplayerLobby model={entryModel()} actions={calls} onExit={vi.fn()} />);
 
+    expect(screen.getByLabelText("Meducktion online lobby").querySelector('img[src$="/assets/meducktion-medical-duck-logo.webp"]')).toBeInTheDocument();
+
     const name = screen.getByLabelText("Your display name");
     await user.clear(name);
     await user.type(name, "Keshawn");
@@ -98,8 +100,8 @@ describe("multiplayer lobby UI", () => {
         onExit={vi.fn()}
       />,
     );
-    expect(screen.getByRole("heading", { name: "The room is ready" })).toBeInTheDocument();
-    expect(screen.getByText(/Live match synchronization/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Starting the match" })).toBeInTheDocument();
+    expect(screen.getByText(/room is locked/)).toBeInTheDocument();
   });
 
   it("stays in the lobby when leaving fails", async () => {

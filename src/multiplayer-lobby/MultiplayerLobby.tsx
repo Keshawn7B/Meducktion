@@ -4,6 +4,8 @@ import "./multiplayer-lobby.css";
 
 export const MULTIPLAYER_NAME_STORAGE_KEY = "meducktion:multiplayer-name";
 
+const duckLogoAsset = `${import.meta.env.BASE_URL}assets/meducktion-medical-duck-logo.webp`;
+
 function savedDisplayName(): string {
   try {
     return localStorage.getItem(MULTIPLAYER_NAME_STORAGE_KEY) || "Detective";
@@ -75,7 +77,7 @@ export function MultiplayerLobby({ model, actions, onExit }: MultiplayerLobbyPro
         <header className="lobby-header">
           <button className="button button-text" onClick={() => void exitLobby()}>Back</button>
           <div className="lobby-wordmark" aria-label="Meducktion online lobby">
-            <span aria-hidden="true">m</span>
+            <img src={duckLogoAsset} alt="" />
             <strong>Meducktion</strong>
           </div>
           <span className="lobby-live-badge">Online lobby</span>
@@ -173,8 +175,8 @@ export function MultiplayerLobby({ model, actions, onExit }: MultiplayerLobbyPro
           <section className="lobby-ready-panel">
             <span className="ready-check" aria-hidden="true">✓</span>
             <p className="playful-kicker">Room {model.roomCode}</p>
-            <h1 id="lobby-title">The room is ready</h1>
-            <p>The lobby is locked and ready. Live match synchronization is the next multiplayer step.</p>
+            <h1 id="lobby-title">Starting the match</h1>
+            <p>The room is locked. Return home and reopen Online Play if the match does not appear.</p>
             <button className="button button-cream button-large" onClick={onExit}>Return Home</button>
           </section>
         )}

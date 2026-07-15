@@ -38,6 +38,7 @@ export function getFirebaseServices(): MeducktionFirebaseServices {
 }
 
 export async function ensureAnonymousPlayer(auth = getFirebaseServices().auth): Promise<User> {
+  await auth.authStateReady();
   if (auth.currentUser) return auth.currentUser;
   return (await signInAnonymously(auth)).user;
 }

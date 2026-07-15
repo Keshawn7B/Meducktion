@@ -265,6 +265,7 @@ export function createCardMatch(
       revealed: false,
     },
     acknowledgedRevealPlayerIds: [],
+    diagnosisPassedPlayerIds: [],
     latestPlays: [],
     result: null,
     eventLog: [],
@@ -1423,9 +1424,81 @@ export function transitionCardGame(
       return fail(original, "INVALID_PHASE", "Review the revealed clues first.");
     }
     state.phase = "diagnosis_window";
+    state.diagnosisPassedPlayerIds = [];
     emit(state, events, "diagnosis_window_opened", [], {
       unlocked: state.currentRound >= 2,
     });
+    return complete(original, state, events);
+  }
+
+  if (command.type === "CONVERT_TO_BOT") {
+    const player = state.players[command.playerId];
+    if (player === undefined) {
+      return fail(original, "UNKNOWN_PLAYER", "Unknown player.", command.playerId);
+    }
+    if (player.kind === "bot") {
+      return fail(original, "INVALID_COMMAND", "This player is already automated.");
+    }
+    player.kind = "bot";
+    player.botStyle = "balanced";
+    emit(state, events, "player_replaced_by_bot", [command.playerId]);
+
+    if (state.phase === "card_selection" && player.correctDiagnosisRound === null) {
+      autoLockBots(content, state, events);
+      if (allActiveCardsLocked(state)) {
+        state.phase = "cards_locked";
+        emit(state, events, "all_cards_locked");
+      }
+    } else if (state.phase === "card_reveal") {
+      if (!state.acknowledgedRevealPlayerIds.includes(command.playerId)) {
+        state.acknowledgedRevealPlayerIds.push(command.playerId);
+        emit(state, events, "reveal_acknowledged", [command.playerId], { bot: true });
+      }
+      if (state.playerOrder.every((playerId) => state.acknowledgedRevealPlayerIds.includes(playerId))) {
+        state.phase = "clue_review";
+      }
+    } else if (state.phase === "diagnosis_window") {
+      autoDiagnoseBots(content, state, events);
+      const decided =
+        player.finalDiagnosisSubmitted ||
+        player.diagnosisSubmissions.some((submission) => submission.round === state.currentRound);
+      if (!decided && !(state.diagnosisPassedPlayerIds ?? []).includes(command.playerId)) {
+        state.diagnosisPassedPlayerIds = [...(state.diagnosisPassedPlayerIds ?? []), command.playerId];
+        emit(state, events, "diagnosis_passed", [command.playerId], { bot: true });
+      }
+    }
+    return complete(original, state, events);
+  }
+
+  if (command.type === "PASS_DIAGNOSIS") {
+    if (state.phase !== "diagnosis_window") {
+      return fail(original, "INVALID_PHASE", "Diagnosis is not open now.");
+    }
+    const player = state.players[command.playerId];
+    if (player === undefined) {
+      return fail(original, "UNKNOWN_PLAYER", "Unknown player.", command.playerId);
+    }
+    const passed = state.diagnosisPassedPlayerIds ?? [];
+    if (
+      passed.includes(command.playerId) ||
+      player.diagnosisSubmissions.some((submission) => submission.round === state.currentRound)
+    ) {
+      return fail(original, "INVALID_COMMAND", "This player already made a round decision.");
+    }
+    if (
+      state.currentRound >= state.maximumRounds &&
+      player.correctDiagnosisRound === null &&
+      player.diagnosisAttemptsUsed < 2
+    ) {
+      return fail(
+        original,
+        "DIAGNOSIS_REQUIRED",
+        "A final diagnosis is required while an attempt remains.",
+        command.playerId,
+      );
+    }
+    state.diagnosisPassedPlayerIds = [...passed, command.playerId];
+    emit(state, events, "diagnosis_passed", [command.playerId]);
     return complete(original, state, events);
   }
 

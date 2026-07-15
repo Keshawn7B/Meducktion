@@ -153,6 +153,8 @@ export interface MatchEvent {
     | "reveal_acknowledged"
     | "diagnosis_window_opened"
     | "diagnosis_submitted"
+    | "diagnosis_passed"
+    | "player_replaced_by_bot"
     | "diagnosis_incorrect"
     | "diagnosis_correct"
     | "next_round_ready"
@@ -180,6 +182,7 @@ export interface MatchState {
   publicClues: PublicClue[];
   sharedEvent: SharedEvent;
   acknowledgedRevealPlayerIds: string[];
+  diagnosisPassedPlayerIds: string[];
   latestPlays: CardPlay[];
   result: MatchResult | null;
   eventLog: MatchEvent[];
@@ -209,6 +212,8 @@ export type CardGameCommand =
       conditionId: string;
       clueIds: [string, string];
     }
+  | { type: "PASS_DIAGNOSIS"; playerId: string }
+  | { type: "CONVERT_TO_BOT"; playerId: string }
   | { type: "CONTINUE_FROM_DIAGNOSIS" }
   | { type: "ADVANCE_ROUND" }
   | { type: "COMPLETE_MATCH" };

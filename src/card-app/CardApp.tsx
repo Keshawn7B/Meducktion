@@ -34,6 +34,8 @@ const categoryLabels: Record<CardCategory, string> = {
 const publicAsset = (filename: string) =>
   `${import.meta.env.BASE_URL}assets/${filename}`;
 
+const duckLogoAsset = publicAsset("meducktion-medical-duck-logo.webp");
+
 const opponentPortraits: Record<string, string> = {
   "Dr. Beak": publicAsset("opponent-dr-beak.webp"),
   Mira: publicAsset("opponent-mira.webp"),
@@ -73,7 +75,7 @@ const tutorialPanels = [
   },
 ] as const;
 
-export function CardApp({ model, actions, onOpenMultiplayer }: CardAppProps) {
+export function CardApp({ model, actions, onOpenMultiplayer, onLeaveMatch }: CardAppProps) {
   const [tutorialOpen, setTutorialOpen] = useState(false);
 
   return (
@@ -108,6 +110,7 @@ export function CardApp({ model, actions, onOpenMultiplayer }: CardAppProps) {
           model={model}
           actions={actions}
           onTutorial={() => setTutorialOpen(true)}
+          {...(onLeaveMatch ? { onLeaveMatch } : {})}
         />
       )}
       {model.screen === "results" && (
@@ -209,8 +212,8 @@ function HomeScreen({
         )}
         <Disclaimer />
       </section>
-      <section className="home-art" aria-label="Jordan waits in a cozy clinic room">
-        <PatientPortrait name={model.patient.displayName} large />
+      <section className="home-art" aria-label="Meducktion medical duck mascot">
+        <img className="home-duck-logo" src={duckLogoAsset} alt="" />
         <div className="art-card art-card-ask" aria-hidden="true">
           <span>?</span>
           ASK
@@ -277,7 +280,7 @@ function SetupScreen({
           </select>
           <p className="field-note">
             This match uses one human and one deterministic bot. The rules are
-            ready for 2&ndash;4 players; online rooms come later.
+            ready for 2&ndash;4 players in local or private online rooms.
           </p>
           <button
             className="button button-primary button-large button-wide"
@@ -382,9 +385,11 @@ function MatchScreen({
   model,
   actions,
   onTutorial,
-}: ScreenProps & { onTutorial: () => void }) {
+  onLeaveMatch,
+}: ScreenProps & { onTutorial: () => void; onLeaveMatch?: () => void }) {
   const [diagnosisOpen, setDiagnosisOpen] = useState(false);
   const match = model.match;
+  const onlineBlocked = model.online?.isSyncing || model.online?.isOffline;
   const selectedCard = match.hand.find((card) => card.selected);
   const diagnosisLabel = match.humanHasDiagnosed
     ? "Diagnosis submitted"
@@ -407,12 +412,25 @@ function MatchScreen({
     <>
       <header className="match-header">
         <Brand compact />
-        <RoundTracker round={match.round} maximum={match.maximumRounds} />
+        <div className="match-round-and-room">
+          <RoundTracker round={match.round} maximum={match.maximumRounds} />
+          {model.online && (
+            <span className={`online-room-chip${model.online.isOffline ? " is-offline" : ""}`} role="status">
+              <i aria-hidden="true" />
+              Room {model.online.roomCode}
+              {" "}
+              <small>{model.online.isOffline ? "Offline" : model.online.isSyncing ? "Syncing" : "Live"}</small>
+            </span>
+          )}
+        </div>
         <div className="match-header-actions">
+          {onLeaveMatch && <button className="button button-leave-match" onClick={() => {
+            if (window.confirm("Leave this match? A bot will take over your seat so the room can continue.")) onLeaveMatch();
+          }}>Leave Match</button>}
           <button className="button button-header" onClick={onTutorial}>Rules</button>
           <button
             className="button button-diagnose"
-            disabled={!match.diagnosisUnlocked || match.humanHasDiagnosed}
+            disabled={!match.diagnosisUnlocked || match.humanHasDiagnosed || onlineBlocked}
             onClick={() => setDiagnosisOpen(true)}
           >
             {diagnosisLabel}
@@ -440,10 +458,14 @@ function MatchScreen({
                   <small>{opponent.styleLabel} opponent</small>
                 </div>
                 <span className={`status-pill status-${opponent.status}`}>
-                  {opponent.status === "locked" ? "Locked" : opponent.status === "diagnosed" ? "Diagnosed" : opponent.status === "reviewing" ? "Waiting" : "Choosing"}
+                  {opponent.status === "locked" ? "Locked" : opponent.status === "diagnosed" ? "Diagnosed" : opponent.status === "reconnecting" ? "Reconnecting" : opponent.status === "reviewing" ? "Waiting" : "Choosing"}
                 </span>
                 <div className="opponent-card-backs" aria-label="Three face-down opponent cards">
-                  {[0, 1, 2].map((index) => <span className="card-back" key={index} aria-hidden="true"><i>M</i></span>)}
+                  {[0, 1, 2].map((index) => (
+                    <span className="card-back" key={index} aria-hidden="true">
+                      <img src={duckLogoAsset} alt="" />
+                    </span>
+                  ))}
                 </div>
               </article>
             ))}
@@ -534,7 +556,7 @@ function MatchScreen({
             <div className="hand-tools">
               <button
                 className="button button-small"
-                disabled={!match.redrawAvailable || match.phase !== "card_selection"}
+                disabled={!match.redrawAvailable || match.phase !== "card_selection" || onlineBlocked}
                 onClick={actions.useRedraw}
               >
                 Redraw hand
@@ -570,15 +592,15 @@ function MatchScreen({
             {match.canLock && (
               <button
                 className="button button-primary button-large"
-                disabled={!selectedCard}
+                disabled={!selectedCard || onlineBlocked}
                 onClick={actions.lockCard}
               >
                 Lock Card
               </button>
             )}
             {match.canReveal && (
-              <button className="button button-primary button-large" onClick={actions.revealCards}>
-                Reveal Cards
+              <button className="button button-primary button-large" disabled={onlineBlocked} onClick={actions.revealCards}>
+                {match.revealActionLabel}
               </button>
             )}
           </div>}
@@ -593,6 +615,7 @@ function MatchScreen({
                 {match.diagnosisUnlocked && !match.humanHasDiagnosed && (
                   <button
                     className="button button-diagnose button-large"
+                    disabled={onlineBlocked}
                     onClick={() => setDiagnosisOpen(true)}
                   >
                     Diagnose now
@@ -601,6 +624,7 @@ function MatchScreen({
                 {!match.mustDiagnose && (
                   <button
                     className={`button button-large ${match.diagnosisUnlocked ? "button-cream" : "button-primary"}`}
+                    disabled={onlineBlocked}
                     onClick={actions.advanceRound}
                   >
                     {match.round === match.maximumRounds ? "Finish Match" : "Keep investigating"}
@@ -886,7 +910,11 @@ function ResultsScreen({ model, actions }: ScreenProps) {
           ))}
         </article>
       </section>
-      <button className="button button-primary button-large" onClick={actions.playAgain}>
+      <button
+        className="button button-primary button-large"
+        disabled={model.online?.isSyncing || model.online?.isOffline}
+        onClick={actions.playAgain}
+      >
         Play Again
       </button>
       <Disclaimer />

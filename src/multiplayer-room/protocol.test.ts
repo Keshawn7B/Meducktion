@@ -28,6 +28,8 @@ describe("multiplayer room protocol", () => {
     room = startRoomRecord(room, "host", session, 3_000);
     expect(room.status).toBe("active");
     expect(room.session?.matchState.playerOrder).toEqual(["host", "guest"]);
+    expect(joinRoomRecord(room, "guest", "Guest", 4_000)).toBe(room);
+    expect(() => joinRoomRecord(room, "late", "Late player", 4_000)).toThrow(/already started/);
   });
 
   it("locks a fully-ready lobby without publishing private match state", () => {
@@ -47,6 +49,13 @@ describe("multiplayer room protocol", () => {
     expect(room.revision).toBe(2);
   });
 
+  it("hands lobby ownership to the next player when the host leaves", () => {
+    const room = leaveRoomRecord(joinRoomRecord(created(), "guest", "Guest", 2_000), "host");
+    expect(room.memberUids).toEqual(["guest"]);
+    expect(room.hostUid).toBe("guest");
+    expect(room.members.guest?.ready).toBe(true);
+  });
+
   it("applies existing idempotent command envelopes without duplicating rules", () => {
     let room = joinRoomRecord(created(), "guest", "Guest", 2_000);
     room = setMemberReady(room, "guest", true);
@@ -61,6 +70,75 @@ describe("multiplayer room protocol", () => {
     room = applyRoomCommand(room, "guest", envelope, 5_000);
     expect(room.session?.commandSequence).toBe(1);
     expect(room.revision).toBe(revision);
+  });
+
+  it("keeps player commands scoped to their seat and waits for every round decision", () => {
+    let room = joinRoomRecord(created(), "guest", "Guest", 2_000);
+    room = setMemberReady(room, "guest", true);
+    const state = createCardMatch(thePainThatMovedCardCase, { seed: room.seed, players: [
+      { id: "host", displayName: "Host", kind: "human" },
+      { id: "guest", displayName: "Guest", kind: "human" },
+    ] });
+    state.phase = "diagnosis_window";
+    state.currentRound = 2;
+    room = startRoomRecord(room, "host", createCardMatchSession(state, room.roomId), 3_000);
+
+    expect(() => applyRoomCommand(room, "guest", {
+      commandId: "wrong-seat",
+      commandSequence: 1,
+      expectedRevision: 0,
+      command: { type: "PASS_DIAGNOSIS", playerId: "host" },
+    }, 4_000)).toThrow(/own player seat/);
+
+    room = applyRoomCommand(room, "host", {
+      commandId: "host-pass",
+      commandSequence: 1,
+      expectedRevision: 0,
+      command: { type: "PASS_DIAGNOSIS", playerId: "host" },
+    }, 4_000);
+    expect(() => applyRoomCommand(room, "host", {
+      commandId: "too-soon",
+      commandSequence: 2,
+      expectedRevision: 1,
+      command: { type: "CONTINUE_FROM_DIAGNOSIS" },
+    }, 4_100)).toThrow(/Every player/);
+
+    room = applyRoomCommand(room, "guest", {
+      commandId: "guest-pass",
+      commandSequence: 2,
+      expectedRevision: 1,
+      command: { type: "PASS_DIAGNOSIS", playerId: "guest" },
+    }, 4_200);
+    room = applyRoomCommand(room, "host", {
+      commandId: "continue",
+      commandSequence: 3,
+      expectedRevision: 2,
+      command: { type: "CONTINUE_FROM_DIAGNOSIS" },
+    }, 4_300);
+    expect(room.session?.matchState.phase).toBe("next_round");
+  });
+
+  it("replaces a departing active player with a deterministic bot", () => {
+    let room = joinRoomRecord(created(), "guest", "Guest", 2_000);
+    room = setMemberReady(room, "guest", true);
+    const state = createCardMatch(thePainThatMovedCardCase, { seed: room.seed, players: [
+      { id: "host", displayName: "Host", kind: "human" },
+      { id: "guest", displayName: "Guest", kind: "human" },
+    ] });
+    room = startRoomRecord(room, "host", createCardMatchSession(state, room.roomId), 3_000);
+    room = applyRoomCommand(room, "guest", {
+      commandId: "leave-active",
+      commandSequence: 1,
+      expectedRevision: 0,
+      command: { type: "CONVERT_TO_BOT", playerId: "guest" },
+    }, 4_000);
+    expect(room.session?.matchState.players.guest?.kind).toBe("bot");
+    expect(() => applyRoomCommand(room, "guest", {
+      commandId: "act-after-leaving",
+      commandSequence: 2,
+      expectedRevision: 1,
+      command: { type: "PASS_DIAGNOSIS", playerId: "guest" },
+    }, 4_100)).toThrow(/controlled by a bot/);
   });
 
   it("generates readable six-character room codes", () => {

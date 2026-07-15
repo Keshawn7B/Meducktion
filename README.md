@@ -2,7 +2,7 @@
 
 **Reveal. Deduce. Diagnose.**
 
-Meducktion is a beginner-friendly hidden-identity medical deduction game. Every player has a different hidden patient identity. Reveal one symptom each round; the game automatically sorts it into your private YES or NO pile. Use both piles to eliminate possibilities, then risk one of three exact guesses before an opponent solves their patient. The current local vertical slice plays one human against a deterministic bot; its framework-independent rules support 2–4 players and simultaneous decisions.
+Meducktion is a beginner-friendly competitive medical deduction card game. Players investigate the same fictional patient, choose one Ask, Check, Test, or Special card each round, collect shared and private clues, and try to make the strongest correct diagnosis. Local play supports deterministic bots; private Firebase rooms support two to four human players.
 
 > **Medical disclaimer:** Meducktion is a fictional educational game. It is not medical advice, clinical training, or a diagnostic tool. Do not use it to make decisions about real patients.
 
@@ -15,7 +15,7 @@ npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite. `Play` starts the current local card match. A first online-room foundation now provides anonymous Firebase authentication, transactional Firestore room storage, lobby membership/readiness, and command synchronization behind the existing deterministic session boundary. The player-facing create/join lobby is not connected yet.
+Open the local URL printed by Vite. `Play Local` starts a bot match. `Play Online` creates or joins a private room, synchronizes the live match through Firestore, and resumes the room after refresh while the same anonymous Firebase identity is available.
 
 ## Verify
 
@@ -36,7 +36,9 @@ npm run test:multiplayer
 npm run test:firebase-rules
 ```
 
-The current Firebase CLI requires JDK 21 or newer for the Firestore emulator. Production credentials are not included in the repository.
+The current Firebase CLI requires JDK 21 or newer for the Firestore emulator. Online play uses transactional commands with revision and idempotency checks. The match header keeps the room code and connection state visible, and gameplay controls pause while a command is syncing or the browser is offline. Active players write isolated Firestore heartbeats every 15 seconds; after a 90-second reconnect grace period, another room member transactionally replaces a stale human seat with the deterministic bot so the match can continue. A departing lobby host transfers ownership to the next player, an explicit active-match exit triggers immediate bot takeover, and the host removes a completed room when returning home. It remains an unranked client-authoritative MVP because room members can inspect shared Firestore snapshots.
+
+The checked-in Firestore rules are deployed to the `meducktion` Firebase project. A disposable two-user production smoke test verifies anonymous authentication, room creation/join/readiness, match start, cross-client selection and locking, and host cleanup.
 
 ## Current product documentation
 
