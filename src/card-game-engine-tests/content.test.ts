@@ -29,7 +29,7 @@ describe("competitive card content", () => {
     const expectedQuestions = thePainThatMovedCardCase.cards.map((card) => card.displayName);
     for (const cardCase of cardCaseRegistry) {
       expect(cardCase.conditions).toHaveLength(8);
-      expect(cardCase.cards).toHaveLength(24);
+      expect(cardCase.cards).toHaveLength(23);
       expect(cardCase.cards.map((card) => card.displayName)).toEqual(expectedQuestions);
       expect(new Set(cardCase.clues.map((clue) => clue.answer))).toEqual(
         new Set(["yes", "no"]),
@@ -39,9 +39,9 @@ describe("competitive card content", () => {
         cardCase.cards.filter(
           (card) => card.result.type === "reveal_clue" && card.visibility === "private",
         ).length,
-      ).toBe(24);
+      ).toBe(23);
       expect(cardCase.cards.every((card) => card.copies === 1)).toBe(true);
-      expect(new Set(cardCase.cards.map((card) => card.id)).size).toBe(24);
+      expect(new Set(cardCase.cards.map((card) => card.id)).size).toBe(23);
     }
   });
 
@@ -51,7 +51,7 @@ describe("competitive card content", () => {
     expect(thePainThatMovedCardCase.correctConditionId).toBe(
       "diagnosis.appendicitis",
     );
-    expect(thePainThatMovedCardCase.contentVersion).toContain("ten-round-matches");
+    expect(thePainThatMovedCardCase.contentVersion).toContain("diagnosis-education");
     expect(thePainThatMovedCardCase.status).toBe("medicallyApproved");
   });
 
@@ -66,6 +66,21 @@ describe("competitive card content", () => {
       (condition) => condition.displayName === "Appendicitis",
     );
     expect(appendicitis?.learnMore).toContain("appendix");
+  });
+
+  it("uses varied, meaningful YES answers instead of defaulting every case to fever", () => {
+    const startingClues = cardCaseRegistry.map((cardCase) => {
+      const startingClueId = cardCase.variants[0]?.startingClueId;
+      const clue = cardCase.clues.find((candidate) => candidate.id === startingClueId);
+      expect(clue).toMatchObject({ answer: "yes", meaningful: true });
+      return clue;
+    });
+    const feverStarts = startingClues.filter(
+      (clue) => clue?.question === "Does the patient have a fever?",
+    );
+    expect(feverStarts).toHaveLength(1);
+    expect(new Set(startingClues.map((clue) => clue?.question)).size).toBeGreaterThan(8);
+    expect(thePainThatMovedCardCase.variants[0]?.startingClueId).toContain("belly-pain");
   });
 
   it("uses only Ask, Check, and Test question categories", () => {
@@ -87,6 +102,12 @@ describe("competitive card content", () => {
     expect(cardCaseRegistry.flatMap((cardCase) => cardCase.cards).every(
       (card) => card.category !== "special" && card.visibility === "private" && card.result.type === "reveal_clue",
     )).toBe(true);
+  });
+
+  it("does not treat dehydration as a symptom-question card", () => {
+    expect(cardCaseRegistry.flatMap((cardCase) => cardCase.cards).some(
+      (card) => card.displayName === "Dehydrated?" || card.description.includes("signs of dehydration"),
+    )).toBe(false);
   });
 
   it("gives every condition a distinct answer profile within its case", () => {
@@ -135,11 +156,41 @@ describe("competitive card content", () => {
       expect(answerFor(condition, "Is the oxygen reading in the expected range?")).toBe("no");
     }
     expect(answerFor("Contact dermatitis", "Are the patient's eyes itchy?")).toBe("no");
-    expect(
-      cardCaseRegistry.every((cardCase) =>
-        cardCase.educationalExplanation.includes("Another person with the same condition"),
-      ),
-    ).toBe(true);
+  });
+
+  it("provides diagnosis-specific educational results with common symptoms", () => {
+    for (const cardCase of cardCaseRegistry) {
+      const diagnosis = cardCase.conditions.find(
+        (condition) => condition.id === cardCase.correctConditionId,
+      );
+      expect(diagnosis).toBeDefined();
+      expect(cardCase.educationalExplanation.toLowerCase()).toContain(
+        diagnosis?.displayName.toLowerCase(),
+      );
+      expect(cardCase.educationalExplanation).toContain("Common symptoms");
+      expect(cardCase.educationalExplanation).not.toContain(
+        "is the authored answer for this specific fictional patient",
+      );
+    }
+
+    const explanationFor = (diagnosisName: string) => {
+      const cardCase = cardCaseRegistry.find((candidate) =>
+        candidate.conditions.some(
+          (condition) =>
+            condition.id === candidate.correctConditionId
+            && condition.displayName === diagnosisName,
+        ),
+      );
+      if (!cardCase) throw new Error(`Missing educational fixture: ${diagnosisName}`);
+      return cardCase.educationalExplanation;
+    };
+
+    expect(explanationFor("Appendicitis")).toContain("appendix");
+    expect(explanationFor("Appendicitis")).toContain("lower right");
+    expect(explanationFor("Asthma flare")).toContain("airways");
+    expect(explanationFor("Asthma flare")).toContain("wheezing");
+    expect(explanationFor("Dehydration")).toContain("does not have enough fluid");
+    expect(explanationFor("Dehydration")).toContain("darker urine");
   });
 
   it("excludes cards that are incompatible with the active case", () => {

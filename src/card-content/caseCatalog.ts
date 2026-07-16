@@ -4,7 +4,7 @@ type SymptomKey =
   | "fever" | "cough" | "runny-nose" | "sore-throat" | "wheezing"
   | "short-breath" | "chest-pain" | "headache" | "dizzy" | "light-sensitive"
   | "nausea" | "vomiting" | "diarrhea" | "belly-pain" | "poor-appetite"
-  | "rash" | "itchy-eyes" | "swelling" | "fatigue" | "dehydrated"
+  | "rash" | "itchy-eyes" | "swelling" | "fatigue"
   | "urine-clear" | "glucose-normal" | "pulse-normal" | "oxygen-normal";
 
 interface QuestionSpec {
@@ -34,7 +34,6 @@ const questions: readonly QuestionSpec[] = [
   { key: "itchy-eyes", title: "Itchy eyes?", question: "Are the patient's eyes itchy?", category: "check" },
   { key: "swelling", title: "Swelling?", question: "Does the patient have unusual swelling?", category: "check" },
   { key: "fatigue", title: "Very tired?", question: "Is the patient unusually tired?", category: "ask" },
-  { key: "dehydrated", title: "Dehydrated?", question: "Does the patient show signs of dehydration?", category: "check" },
   { key: "urine-clear", title: "Urine clear?", question: "Is the urine sample clear?", category: "test" },
   { key: "glucose-normal", title: "Blood sugar normal?", question: "Is the blood sugar reading in the expected range?", category: "test" },
   { key: "pulse-normal", title: "Pulse normal?", question: "Is the pulse in the expected range?", category: "test" },
@@ -44,28 +43,28 @@ const questions: readonly QuestionSpec[] = [
 const profiles: Readonly<Record<string, readonly SymptomKey[]>> = {
   "Acid reflux": ["cough", "sore-throat", "wheezing", "short-breath", "chest-pain", "nausea", "belly-pain", "poor-appetite", "urine-clear", "glucose-normal", "pulse-normal", "oxygen-normal"],
   "Allergic reaction": ["cough", "runny-nose", "sore-throat", "wheezing", "short-breath", "chest-pain", "dizzy", "nausea", "vomiting", "diarrhea", "belly-pain", "rash", "itchy-eyes", "swelling", "fatigue", "urine-clear", "glucose-normal"],
-  "Appendicitis": ["fever", "headache", "dizzy", "nausea", "vomiting", "diarrhea", "belly-pain", "poor-appetite", "fatigue", "dehydrated", "urine-clear", "glucose-normal", "oxygen-normal"],
+  "Appendicitis": ["fever", "headache", "dizzy", "nausea", "vomiting", "diarrhea", "belly-pain", "poor-appetite", "fatigue", "urine-clear", "glucose-normal", "oxygen-normal"],
   "Asthma flare": ["cough", "wheezing", "short-breath", "chest-pain", "dizzy", "fatigue", "urine-clear", "glucose-normal"],
   "Common cold": ["fever", "cough", "runny-nose", "sore-throat", "headache", "poor-appetite", "fatigue", "urine-clear", "glucose-normal", "pulse-normal", "oxygen-normal"],
   "Contact dermatitis": ["rash", "swelling", "fatigue", "urine-clear", "glucose-normal", "pulse-normal", "oxygen-normal"],
-  "Dehydration": ["headache", "dizzy", "nausea", "vomiting", "diarrhea", "belly-pain", "poor-appetite", "fatigue", "dehydrated", "glucose-normal", "oxygen-normal"],
-  "Food intolerance": ["headache", "nausea", "vomiting", "diarrhea", "belly-pain", "poor-appetite", "fatigue", "dehydrated", "urine-clear", "glucose-normal", "pulse-normal", "oxygen-normal"],
-  "Heat exhaustion": ["headache", "dizzy", "nausea", "vomiting", "belly-pain", "poor-appetite", "fatigue", "dehydrated", "glucose-normal", "oxygen-normal"],
-  "Influenza-like illness": ["fever", "cough", "runny-nose", "sore-throat", "short-breath", "chest-pain", "headache", "dizzy", "nausea", "vomiting", "diarrhea", "belly-pain", "poor-appetite", "fatigue", "dehydrated", "urine-clear", "glucose-normal"],
-  "Inner-ear vertigo": ["headache", "dizzy", "nausea", "vomiting", "poor-appetite", "fatigue", "dehydrated", "urine-clear", "glucose-normal", "pulse-normal", "oxygen-normal"],
-  "Kidney stone": ["fever", "dizzy", "nausea", "vomiting", "belly-pain", "poor-appetite", "fatigue", "dehydrated", "glucose-normal", "oxygen-normal"],
+  "Dehydration": ["headache", "dizzy", "nausea", "vomiting", "diarrhea", "belly-pain", "poor-appetite", "fatigue", "glucose-normal", "oxygen-normal"],
+  "Food intolerance": ["headache", "nausea", "vomiting", "diarrhea", "belly-pain", "poor-appetite", "fatigue", "urine-clear", "glucose-normal", "pulse-normal", "oxygen-normal"],
+  "Heat exhaustion": ["headache", "dizzy", "nausea", "vomiting", "belly-pain", "poor-appetite", "fatigue", "glucose-normal", "oxygen-normal"],
+  "Influenza-like illness": ["fever", "cough", "runny-nose", "sore-throat", "short-breath", "chest-pain", "headache", "dizzy", "nausea", "vomiting", "diarrhea", "belly-pain", "poor-appetite", "fatigue", "urine-clear", "glucose-normal"],
+  "Inner-ear vertigo": ["headache", "dizzy", "nausea", "vomiting", "poor-appetite", "fatigue", "urine-clear", "glucose-normal", "pulse-normal", "oxygen-normal"],
+  "Kidney stone": ["fever", "dizzy", "nausea", "vomiting", "belly-pain", "poor-appetite", "fatigue", "glucose-normal", "oxygen-normal"],
   "Laryngitis": ["fever", "cough", "runny-nose", "sore-throat", "headache", "poor-appetite", "fatigue", "urine-clear", "glucose-normal", "pulse-normal", "oxygen-normal"],
-  "Low blood sugar": ["headache", "dizzy", "nausea", "vomiting", "poor-appetite", "fatigue", "dehydrated", "urine-clear", "pulse-normal", "oxygen-normal"],
-  "Migraine": ["headache", "dizzy", "light-sensitive", "nausea", "vomiting", "belly-pain", "poor-appetite", "fatigue", "dehydrated", "urine-clear", "glucose-normal", "pulse-normal", "oxygen-normal"],
+  "Low blood sugar": ["headache", "dizzy", "nausea", "vomiting", "poor-appetite", "fatigue", "urine-clear", "pulse-normal", "oxygen-normal"],
+  "Migraine": ["headache", "dizzy", "light-sensitive", "nausea", "vomiting", "belly-pain", "poor-appetite", "fatigue", "urine-clear", "glucose-normal", "pulse-normal", "oxygen-normal"],
   "Panic attack": ["short-breath", "chest-pain", "headache", "dizzy", "nausea", "belly-pain", "fatigue", "urine-clear", "glucose-normal", "oxygen-normal"],
-  "Pneumonia": ["fever", "cough", "runny-nose", "sore-throat", "wheezing", "short-breath", "chest-pain", "headache", "dizzy", "nausea", "vomiting", "belly-pain", "poor-appetite", "fatigue", "dehydrated", "urine-clear", "glucose-normal"],
+  "Pneumonia": ["fever", "cough", "runny-nose", "sore-throat", "wheezing", "short-breath", "chest-pain", "headache", "dizzy", "nausea", "vomiting", "belly-pain", "poor-appetite", "fatigue", "urine-clear", "glucose-normal"],
   "Poor sleep": ["headache", "dizzy", "nausea", "poor-appetite", "fatigue", "urine-clear", "glucose-normal", "pulse-normal", "oxygen-normal"],
   "Seasonal allergies": ["cough", "runny-nose", "sore-throat", "wheezing", "short-breath", "headache", "itchy-eyes", "swelling", "fatigue", "urine-clear", "glucose-normal", "pulse-normal", "oxygen-normal"],
   "Acute sinusitis": ["fever", "cough", "runny-nose", "sore-throat", "headache", "dizzy", "nausea", "poor-appetite", "swelling", "fatigue", "urine-clear", "glucose-normal", "pulse-normal", "oxygen-normal"],
-  "Viral gastroenteritis": ["fever", "headache", "dizzy", "nausea", "vomiting", "diarrhea", "belly-pain", "poor-appetite", "fatigue", "dehydrated", "urine-clear", "glucose-normal", "oxygen-normal"],
+  "Viral gastroenteritis": ["fever", "headache", "dizzy", "nausea", "vomiting", "diarrhea", "belly-pain", "poor-appetite", "fatigue", "urine-clear", "glucose-normal", "oxygen-normal"],
   "Strep throat": ["fever", "sore-throat", "headache", "nausea", "vomiting", "belly-pain", "poor-appetite", "rash", "swelling", "fatigue", "urine-clear", "glucose-normal", "pulse-normal", "oxygen-normal"],
   "Tension headache": ["headache", "dizzy", "nausea", "poor-appetite", "fatigue", "urine-clear", "glucose-normal", "pulse-normal", "oxygen-normal"],
-  "Urinary infection": ["fever", "headache", "dizzy", "nausea", "vomiting", "belly-pain", "poor-appetite", "fatigue", "dehydrated", "glucose-normal", "oxygen-normal"],
+  "Urinary infection": ["fever", "headache", "dizzy", "nausea", "vomiting", "belly-pain", "poor-appetite", "fatigue", "glucose-normal", "oxygen-normal"],
 };
 
 const conditionDescriptions: Readonly<Record<string, string>> = {
@@ -95,12 +94,40 @@ const conditionDescriptions: Readonly<Record<string, string>> = {
   "Urinary infection": "An infection in part of the urinary system, commonly the bladder or urethra.",
 };
 
+const diagnosisEducation: Readonly<Record<string, string>> = {
+  "Acid reflux": "Acid reflux happens when stomach contents flow back into the esophagus and irritate it. Common symptoms include heartburn, an acidic taste, chest or throat burning, cough, and hoarseness.",
+  "Allergic reaction": "An allergic reaction happens when the immune system overreacts to a usually harmless trigger. Common symptoms include itching, rash or hives, swelling, a runny nose, wheezing, nausea, or vomiting; severe reactions can affect breathing.",
+  Appendicitis: "Appendicitis is inflammation of the appendix, a small pouch attached to the large intestine. Common symptoms include abdominal pain that often begins near the belly button and moves to the lower right, loss of appetite, nausea or vomiting, and fever.",
+  "Asthma flare": "An asthma flare happens when the lung airways become inflamed and narrowed. Common symptoms include wheezing, coughing, shortness of breath, and chest tightness.",
+  "Common cold": "The common cold is a usually mild viral infection of the nose and throat. Common symptoms include a runny or stuffy nose, sore throat, cough, sneezing, and mild fatigue; children may also have a low fever.",
+  "Contact dermatitis": "Contact dermatitis is skin inflammation caused by touching an irritant or allergen. Common symptoms include an itchy, red, dry, cracked, swollen, or blistered rash where contact occurred.",
+  Dehydration: "Dehydration means the body does not have enough fluid to work normally. Common symptoms include thirst, dry mouth, less frequent or darker urine, dizziness, headache, and fatigue.",
+  "Food intolerance": "A food intolerance is difficulty digesting or reacting to a food without the immune response involved in a food allergy. Common symptoms include bloating, gas, belly pain, diarrhea, and nausea after eating the trigger food.",
+  "Heat exhaustion": "Heat exhaustion is a heat illness caused by overheating, often with fluid and salt loss. Common symptoms include heavy sweating, weakness, dizziness, headache, nausea, and a fast pulse.",
+  "Influenza-like illness": "Influenza-like illness describes a group of symptoms that resemble the flu without identifying one specific cause. Common symptoms include fever or chills, cough, sore throat, body aches, headache, and fatigue.",
+  "Inner-ear vertigo": "Inner-ear vertigo is a balance disturbance that creates a false feeling of spinning or movement. Common symptoms include spinning dizziness, unsteadiness, nausea, and vomiting; some causes also affect hearing.",
+  "Kidney stone": "A kidney stone is a hard mineral deposit that forms in the urinary system. Common symptoms include severe pain in the side, back, or lower abdomen, nausea or vomiting, blood in the urine, and urinary urgency or pain.",
+  Laryngitis: "Laryngitis is inflammation of the voice box and vocal cords. Common symptoms include hoarseness or voice loss, a sore throat, and a dry cough.",
+  "Low blood sugar": "Low blood sugar means the blood glucose level has fallen below the expected range. Common symptoms include shaking, sweating, hunger, dizziness, weakness, confusion, and headache.",
+  Migraine: "Migraine is a neurological disorder that causes recurring attacks, not simply a severe headache. Common symptoms include moderate or severe head pain, nausea or vomiting, sensitivity to light or sound, and sometimes an aura.",
+  "Panic attack": "A panic attack is a sudden surge of intense fear or discomfort with strong physical sensations. Common symptoms include a racing heart, chest discomfort, shortness of breath, trembling, dizziness, and nausea.",
+  Pneumonia: "Pneumonia is an infection that inflames the air sacs in one or both lungs. Common symptoms include cough, fever or chills, shortness of breath, chest pain with breathing or coughing, and fatigue.",
+  "Poor sleep": "Poor sleep means getting too little sleep or sleep that is not restorative. Common effects include daytime sleepiness or fatigue, trouble concentrating, irritability, and headache.",
+  "Seasonal allergies": "Seasonal allergies are an immune response to triggers such as pollen. Common symptoms include sneezing, a runny, blocked, or itchy nose, itchy or watery eyes, and cough.",
+  "Acute sinusitis": "Acute sinusitis is short-term inflammation and swelling of the sinuses, often following a viral infection. Common symptoms include nasal congestion or discharge, facial pain or pressure, reduced smell, headache, and sometimes fever.",
+  "Viral gastroenteritis": "Viral gastroenteritis is a viral infection that inflames the stomach and intestines. Common symptoms include watery diarrhea, nausea, vomiting, belly cramps, and sometimes fever.",
+  "Strep throat": "Strep throat is an infection of the throat and tonsils caused by group A Streptococcus bacteria. Common symptoms include a sudden sore throat, painful swallowing, fever, red or swollen tonsils, and swollen neck glands; cough and runny nose are less typical.",
+  "Tension headache": "A tension headache is a common headache that usually causes steady pressure rather than throbbing pain. Common symptoms include a dull, tight-band feeling around the head and tenderness in the scalp, neck, or shoulders, usually without vomiting.",
+  "Urinary infection": "A urinary infection is an infection in part of the urinary tract, most often the bladder or urethra. Common symptoms include burning during urination, frequent or urgent urination, lower abdominal discomfort, and cloudy or bloody urine; fever or back pain can occur when infection reaches the kidneys.",
+};
+
 interface ScenarioSpec {
   slug: string;
   title: string;
   patient: string;
   age: number;
   introduction: string;
+  startingClueKey: SymptomKey;
   conditions: readonly [string, string, string, string];
 }
 
@@ -151,31 +178,31 @@ function expandDiagnosisOptions(
 }
 
 const scenarios: readonly ScenarioSpec[] = [
-  { slug: "the-pain-that-moved", title: "The Pain That Moved", patient: "Jordan Lee", age: 19, introduction: "Jordan's stomach pain moved and has become harder to ignore.", conditions: ["Appendicitis", "Viral gastroenteritis", "Urinary infection", "Kidney stone"] },
-  { slug: "breathless-afternoon", title: "A Breathless Afternoon", patient: "Sam Rivera", age: 16, introduction: "Sam became short of breath during soccer practice.", conditions: ["Asthma flare", "Pneumonia", "Panic attack", "Allergic reaction"] },
-  { slug: "spinning-room", title: "The Spinning Room", patient: "Maya Chen", age: 28, introduction: "Maya says the room suddenly feels as if it is spinning.", conditions: ["Migraine", "Inner-ear vertigo", "Dehydration", "Low blood sugar"] },
-  { slug: "scratchy-mystery", title: "The Scratchy Mystery", patient: "Eli Brooks", age: 12, introduction: "Eli woke with a very sore throat and skipped breakfast.", conditions: ["Strep throat", "Common cold", "Seasonal allergies", "Acid reflux"] },
-  { slug: "midnight-cough", title: "The Midnight Cough", patient: "Noah Reed", age: 34, introduction: "Noah's cough and tiredness kept him awake overnight.", conditions: ["Pneumonia", "Common cold", "Asthma flare", "Acid reflux"] },
-  { slug: "itchy-picnic", title: "The Itchy Picnic", patient: "Avery Stone", age: 22, introduction: "Avery became itchy and uncomfortable after a picnic.", conditions: ["Allergic reaction", "Contact dermatitis", "Seasonal allergies", "Heat exhaustion"] },
-  { slug: "long-bus-ride", title: "The Long Bus Ride", patient: "Kai Morgan", age: 17, introduction: "Kai stepped off a long bus ride feeling dizzy and sick.", conditions: ["Dehydration", "Migraine", "Low blood sugar", "Panic attack"] },
-  { slug: "racing-heart", title: "The Racing Heart", patient: "Nina Patel", age: 31, introduction: "Nina feels dizzy and says her heart suddenly began racing.", conditions: ["Panic attack", "Dehydration", "Low blood sugar", "Heat exhaustion"] },
-  { slug: "tired-student", title: "The Tired Student", patient: "Leo Grant", age: 20, introduction: "Leo has struggled to stay awake and focus all week.", conditions: ["Influenza-like illness", "Common cold", "Poor sleep", "Dehydration"] },
-  { slug: "burning-sip", title: "The Burning Sip", patient: "Riley Park", age: 42, introduction: "Riley notices a burning feeling after meals and drinks.", conditions: ["Acid reflux", "Viral gastroenteritis", "Food intolerance", "Panic attack"] },
-  { slug: "feverish-night", title: "The Feverish Night", patient: "Owen Bell", age: 26, introduction: "Owen woke feverish, tired, and unsure what started it.", conditions: ["Influenza-like illness", "Pneumonia", "Strep throat", "Urinary infection"] },
-  { slug: "side-stitch", title: "The Side Stitch", patient: "Tara Woods", age: 37, introduction: "Tara has sharp pain along one side of her abdomen.", conditions: ["Kidney stone", "Urinary infection", "Appendicitis", "Viral gastroenteritis"] },
-  { slug: "foggy-morning", title: "The Foggy Morning", patient: "Ben Ortiz", age: 45, introduction: "Ben feels foggy, shaky, and unsteady this morning.", conditions: ["Low blood sugar", "Dehydration", "Poor sleep", "Migraine"] },
-  { slug: "chilly-office", title: "The Chilly Office", patient: "Mia Ross", age: 29, introduction: "Mia feels chilled and congested during her workday.", conditions: ["Common cold", "Influenza-like illness", "Seasonal allergies", "Acute sinusitis"] },
-  { slug: "weekend-rash", title: "The Weekend Rash", patient: "June Hall", age: 24, introduction: "June noticed an itchy rash after weekend yard work.", conditions: ["Contact dermatitis", "Allergic reaction", "Seasonal allergies", "Heat exhaustion"] },
-  { slug: "heavy-chest", title: "The Heavy Chest", patient: "Theo King", age: 38, introduction: "Theo describes tightness and heaviness in the chest.", conditions: ["Asthma flare", "Panic attack", "Acid reflux", "Pneumonia"] },
-  { slug: "upset-stomach", title: "The Upset Stomach", patient: "Ivy Scott", age: 15, introduction: "Ivy has belly pain and cannot decide whether to eat.", conditions: ["Viral gastroenteritis", "Food intolerance", "Appendicitis", "Acid reflux"] },
-  { slug: "thirsty-hike", title: "The Thirsty Hike", patient: "Max Young", age: 33, introduction: "Max became dizzy and exhausted near the end of a hike.", conditions: ["Dehydration", "Heat exhaustion", "Low blood sugar", "Panic attack"] },
-  { slug: "achy-morning", title: "The Achy Morning", patient: "Ada Price", age: 51, introduction: "Ada woke tired, achy, and generally unwell.", conditions: ["Influenza-like illness", "Common cold", "Dehydration", "Poor sleep"] },
-  { slug: "dizzy-checkout", title: "The Dizzy Checkout", patient: "Cal Evans", age: 40, introduction: "Cal became dizzy while waiting in a busy checkout line.", conditions: ["Low blood sugar", "Panic attack", "Dehydration", "Inner-ear vertigo"] },
-  { slug: "hoarse-voice", title: "The Hoarse Voice", patient: "Zoe Baker", age: 27, introduction: "Zoe's voice became rough and speaking feels difficult.", conditions: ["Laryngitis", "Common cold", "Acid reflux", "Seasonal allergies"] },
-  { slug: "puffy-face", title: "The Puffy Face", patient: "Finn Cooper", age: 18, introduction: "Finn woke with puffiness around the face and eyes.", conditions: ["Allergic reaction", "Acute sinusitis", "Seasonal allergies", "Contact dermatitis"] },
-  { slug: "sleepless-headache", title: "The Sleepless Headache", patient: "Eva Ward", age: 36, introduction: "Eva has a stubborn headache after a nearly sleepless night.", conditions: ["Migraine", "Tension headache", "Dehydration", "Poor sleep"] },
-  { slug: "rainy-day-sniffles", title: "Rainy Day Sniffles", patient: "Cole Gray", age: 11, introduction: "Cole is sniffling, coughing, and feeling worn out.", conditions: ["Common cold", "Seasonal allergies", "Influenza-like illness", "Acute sinusitis"] },
-  { slug: "after-lunch", title: "After Lunch", patient: "Sara James", age: 30, introduction: "Sara developed nausea and belly pain soon after lunch.", conditions: ["Food intolerance", "Viral gastroenteritis", "Acid reflux", "Appendicitis"] },
+  { slug: "the-pain-that-moved", title: "The Pain That Moved", patient: "Jordan Lee", age: 19, introduction: "Jordan's stomach pain moved and has become harder to ignore.", startingClueKey: "belly-pain", conditions: ["Appendicitis", "Viral gastroenteritis", "Urinary infection", "Kidney stone"] },
+  { slug: "breathless-afternoon", title: "A Breathless Afternoon", patient: "Sam Rivera", age: 16, introduction: "Sam became short of breath during soccer practice.", startingClueKey: "short-breath", conditions: ["Asthma flare", "Pneumonia", "Panic attack", "Allergic reaction"] },
+  { slug: "spinning-room", title: "The Spinning Room", patient: "Maya Chen", age: 28, introduction: "Maya says the room suddenly feels as if it is spinning.", startingClueKey: "dizzy", conditions: ["Migraine", "Inner-ear vertigo", "Dehydration", "Low blood sugar"] },
+  { slug: "scratchy-mystery", title: "The Scratchy Mystery", patient: "Eli Brooks", age: 12, introduction: "Eli woke with a very sore throat and skipped breakfast.", startingClueKey: "sore-throat", conditions: ["Strep throat", "Common cold", "Seasonal allergies", "Acid reflux"] },
+  { slug: "midnight-cough", title: "The Midnight Cough", patient: "Noah Reed", age: 34, introduction: "Noah's cough and tiredness kept him awake overnight.", startingClueKey: "cough", conditions: ["Pneumonia", "Common cold", "Asthma flare", "Acid reflux"] },
+  { slug: "itchy-picnic", title: "The Itchy Picnic", patient: "Avery Stone", age: 22, introduction: "Avery became itchy and uncomfortable after a picnic.", startingClueKey: "rash", conditions: ["Allergic reaction", "Contact dermatitis", "Seasonal allergies", "Heat exhaustion"] },
+  { slug: "long-bus-ride", title: "The Long Bus Ride", patient: "Kai Morgan", age: 17, introduction: "Kai stepped off a long bus ride feeling dizzy and sick.", startingClueKey: "dizzy", conditions: ["Dehydration", "Migraine", "Low blood sugar", "Panic attack"] },
+  { slug: "racing-heart", title: "The Racing Heart", patient: "Nina Patel", age: 31, introduction: "Nina feels dizzy and says her heart suddenly began racing.", startingClueKey: "chest-pain", conditions: ["Panic attack", "Dehydration", "Low blood sugar", "Heat exhaustion"] },
+  { slug: "tired-student", title: "The Tired Student", patient: "Leo Grant", age: 20, introduction: "Leo has struggled to stay awake and focus all week.", startingClueKey: "cough", conditions: ["Influenza-like illness", "Common cold", "Poor sleep", "Dehydration"] },
+  { slug: "burning-sip", title: "The Burning Sip", patient: "Riley Park", age: 42, introduction: "Riley notices a burning feeling after meals and drinks.", startingClueKey: "chest-pain", conditions: ["Acid reflux", "Viral gastroenteritis", "Food intolerance", "Panic attack"] },
+  { slug: "feverish-night", title: "The Feverish Night", patient: "Owen Bell", age: 26, introduction: "Owen woke feverish, tired, and unsure what started it.", startingClueKey: "fever", conditions: ["Influenza-like illness", "Pneumonia", "Strep throat", "Urinary infection"] },
+  { slug: "side-stitch", title: "The Side Stitch", patient: "Tara Woods", age: 37, introduction: "Tara has sharp pain along one side of her abdomen.", startingClueKey: "belly-pain", conditions: ["Kidney stone", "Urinary infection", "Appendicitis", "Viral gastroenteritis"] },
+  { slug: "foggy-morning", title: "The Foggy Morning", patient: "Ben Ortiz", age: 45, introduction: "Ben feels foggy, shaky, and unsteady this morning.", startingClueKey: "dizzy", conditions: ["Low blood sugar", "Dehydration", "Poor sleep", "Migraine"] },
+  { slug: "chilly-office", title: "The Chilly Office", patient: "Mia Ross", age: 29, introduction: "Mia feels chilled and congested during her workday.", startingClueKey: "runny-nose", conditions: ["Common cold", "Influenza-like illness", "Seasonal allergies", "Acute sinusitis"] },
+  { slug: "weekend-rash", title: "The Weekend Rash", patient: "June Hall", age: 24, introduction: "June noticed an itchy rash after weekend yard work.", startingClueKey: "rash", conditions: ["Contact dermatitis", "Allergic reaction", "Seasonal allergies", "Heat exhaustion"] },
+  { slug: "heavy-chest", title: "The Heavy Chest", patient: "Theo King", age: 38, introduction: "Theo describes tightness and heaviness in the chest.", startingClueKey: "short-breath", conditions: ["Asthma flare", "Panic attack", "Acid reflux", "Pneumonia"] },
+  { slug: "upset-stomach", title: "The Upset Stomach", patient: "Ivy Scott", age: 15, introduction: "Ivy has belly pain and cannot decide whether to eat.", startingClueKey: "belly-pain", conditions: ["Viral gastroenteritis", "Food intolerance", "Appendicitis", "Acid reflux"] },
+  { slug: "thirsty-hike", title: "The Thirsty Hike", patient: "Max Young", age: 33, introduction: "Max became dizzy and exhausted near the end of a hike.", startingClueKey: "dizzy", conditions: ["Dehydration", "Heat exhaustion", "Low blood sugar", "Panic attack"] },
+  { slug: "achy-morning", title: "The Achy Morning", patient: "Ada Price", age: 51, introduction: "Ada woke tired, achy, and generally unwell.", startingClueKey: "cough", conditions: ["Influenza-like illness", "Common cold", "Dehydration", "Poor sleep"] },
+  { slug: "dizzy-checkout", title: "The Dizzy Checkout", patient: "Cal Evans", age: 40, introduction: "Cal became dizzy while waiting in a busy checkout line.", startingClueKey: "dizzy", conditions: ["Low blood sugar", "Panic attack", "Dehydration", "Inner-ear vertigo"] },
+  { slug: "hoarse-voice", title: "The Hoarse Voice", patient: "Zoe Baker", age: 27, introduction: "Zoe's voice became rough and speaking feels difficult.", startingClueKey: "sore-throat", conditions: ["Laryngitis", "Common cold", "Acid reflux", "Seasonal allergies"] },
+  { slug: "puffy-face", title: "The Puffy Face", patient: "Finn Cooper", age: 18, introduction: "Finn woke with puffiness around the face and eyes.", startingClueKey: "swelling", conditions: ["Allergic reaction", "Acute sinusitis", "Seasonal allergies", "Contact dermatitis"] },
+  { slug: "sleepless-headache", title: "The Sleepless Headache", patient: "Eva Ward", age: 36, introduction: "Eva has a stubborn headache after a nearly sleepless night.", startingClueKey: "light-sensitive", conditions: ["Migraine", "Tension headache", "Dehydration", "Poor sleep"] },
+  { slug: "rainy-day-sniffles", title: "Rainy Day Sniffles", patient: "Cole Gray", age: 11, introduction: "Cole is sniffling, coughing, and feeling worn out.", startingClueKey: "runny-nose", conditions: ["Common cold", "Seasonal allergies", "Influenza-like illness", "Acute sinusitis"] },
+  { slug: "after-lunch", title: "After Lunch", patient: "Sara James", age: 30, introduction: "Sara developed nausea and belly pain soon after lunch.", startingClueKey: "belly-pain", conditions: ["Food intolerance", "Viral gastroenteritis", "Acid reflux", "Appendicitis"] },
 ];
 
 const disclaimer = "Meducktion is a fictional deduction game. It is not medical advice, clinical training, or a diagnostic tool.";
@@ -227,9 +254,13 @@ function createCase(spec: ScenarioSpec): CardCaseContent {
     caseValue: clues[index]!.meaningful ? "meaningful" as const : "irrelevant" as const,
     rarity: question.category === "test" ? "uncommon" as const : "common" as const,
   }));
+  const startingClue = clues[questions.findIndex((question) => question.key === spec.startingClueKey)];
+  if (startingClue === undefined || startingClue.answer !== "yes" || !startingClue.meaningful) {
+    throw new Error(`Starting clue ${spec.startingClueKey} must be a meaningful YES answer for ${spec.slug}.`);
+  }
   return {
     schemaVersion: "card-case-v1",
-    contentVersion: "6.2.0-ten-round-matches.1",
+    contentVersion: "6.5.0-diagnosis-education.1",
     caseId,
     title: spec.title,
     status: "medicallyApproved",
@@ -244,7 +275,7 @@ function createCase(spec: ScenarioSpec): CardCaseContent {
     })),
     clues,
     cards,
-    variants: [{ id: variantId, displayName: "Classic deduction", startingClueId: clues[0]!.id, initiallyStrongAlternativeId: conditionIds[1]!, especiallyValuableCardIds: cards.filter((_, index) => clues[index]!.meaningful).slice(0, 4).map((card) => card.id) }],
+    variants: [{ id: variantId, displayName: "Classic deduction", startingClueId: startingClue.id, initiallyStrongAlternativeId: conditionIds[1]!, especiallyValuableCardIds: cards.filter((_, index) => clues[index]!.meaningful).slice(0, 4).map((card) => card.id) }],
     sharedEvents: [{
       id: `event.${spec.slug}.extra-choice`,
       displayName: "Extra Choice",
@@ -252,7 +283,8 @@ function createCase(spec: ScenarioSpec): CardCaseContent {
       effect: { type: "draw_two_keep_one" },
     }],
     clueCollectorSet: clues.filter((clue) => clue.meaningful).slice(0, 4).map((clue) => clue.id),
-    educationalExplanation: `${conditionNames[0]} is the authored answer for this specific fictional patient. Another person with the same condition could have a different combination of findings. These simplified findings support gameplay and are not medical advice.`,
+    educationalExplanation: diagnosisEducation[spec.conditions[0]]
+      ?? `${spec.conditions[0]} is the diagnosis for this fictional case. Common symptoms vary from person to person.`,
   };
 }
 

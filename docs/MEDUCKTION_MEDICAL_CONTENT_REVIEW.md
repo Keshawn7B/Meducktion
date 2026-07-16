@@ -50,11 +50,10 @@ For every diagnosis profile and scenario, please assess:
 | 17 | Itchy eyes? | Check | Are the patient's eyes itchy? |  |  |
 | 18 | Swelling? | Check | Does the patient have unusual swelling? |  |  |
 | 19 | Very tired? | Ask | Is the patient unusually tired? |  |  |
-| 20 | Dehydrated? | Check | Does the patient show signs of dehydration? |  |  |
-| 21 | Urine clear? | Test | Is the urine sample clear? |  |  |
-| 22 | Blood sugar normal? | Test | Is the blood sugar reading in the expected range? |  |  |
-| 23 | Pulse normal? | Test | Is the pulse in the expected range? |  |  |
-| 24 | Oxygen normal? | Test | Is the oxygen reading in the expected range? |  |  |
+| 20 | Urine clear? | Test | Is the urine sample clear? |  |  |
+| 21 | Blood sugar normal? | Test | Is the blood sugar reading in the expected range? |  |  |
+| 22 | Pulse normal? | Test | Is the pulse in the expected range? |  |  |
+| 23 | Oxygen normal? | Test | Is the oxygen reading in the expected range? |  |  |
 
 ## Authored diagnosis profiles
 
@@ -64,28 +63,28 @@ For each diagnosis below, the listed features currently answer **YES**. Every qu
 |---|---|---|---|
 | Acid reflux | Cough; sore throat; wheezing; shortness of breath; chest pain; nausea; belly pain; poor appetite; urine clear; blood sugar normal; pulse normal; oxygen normal | Reviewed input received |  |
 | Allergic reaction | Cough; runny nose; sore throat; wheezing; shortness of breath; chest pain; dizziness; nausea; vomiting; diarrhea; belly pain; rash; itchy eyes; swelling; fatigue; urine clear; blood sugar normal | Reviewed input received | Generalized reaction; pulse and oxygen are not assumed normal. |
-| Appendicitis | Fever; headache; dizziness; nausea; vomiting; diarrhea; belly pain; poor appetite; fatigue; dehydration; urine clear; blood sugar normal; oxygen normal | Reviewed input received | Diarrhea is possible but less central than abdominal symptoms. |
+| Appendicitis | Fever; headache; dizziness; nausea; vomiting; diarrhea; belly pain; poor appetite; fatigue; urine clear; blood sugar normal; oxygen normal | Reviewed input received | Diarrhea is possible but less central than abdominal symptoms. |
 | Asthma flare | Cough; wheezing; shortness of breath; chest pain; dizziness; fatigue; urine clear; blood sugar normal | Reviewed input received | Pulse and oxygen are not assumed normal. |
 | Common cold | Fever; cough; runny nose; sore throat; headache; poor appetite; fatigue; urine clear; blood sugar normal; pulse normal; oxygen normal | Reviewed input received | Fever is possible, particularly in children. |
 | Contact dermatitis | Rash; swelling; fatigue; urine clear; blood sugar normal; pulse normal; oxygen normal | Reviewed input received | Itchy eyes excluded; an itchy-skin card is not currently available. |
-| Dehydration | Headache; dizziness; nausea; vomiting; diarrhea; belly pain; poor appetite; fatigue; dehydration; blood sugar normal; oxygen normal | Reviewed input received | Clear urine and normal pulse excluded. |
-| Food intolerance | Headache; nausea; vomiting; diarrhea; belly pain; poor appetite; fatigue; dehydration; urine clear; blood sugar normal; pulse normal; oxygen normal | Reviewed input received | Secondary features should be weaker than gastrointestinal clues. |
-| Heat exhaustion | Headache; dizziness; nausea; vomiting; belly pain; poor appetite; fatigue; dehydration; blood sugar normal; oxygen normal | Reviewed input received | Clear urine and normal pulse excluded. |
-| Influenza-like illness | Fever; cough; runny nose; sore throat; shortness of breath; chest pain; headache; dizziness; nausea; vomiting; diarrhea; belly pain; poor appetite; fatigue; dehydration; urine clear; blood sugar normal | Reviewed input received | Chest pain and dyspnea are warning features; pulse and oxygen are not assumed normal. |
-| Inner-ear vertigo | Headache; dizziness; nausea; vomiting; poor appetite; fatigue; dehydration; urine clear; blood sugar normal; pulse normal; oxygen normal | Reviewed input received | Dehydration is secondary rather than defining. |
-| Kidney stone | Fever; dizziness; nausea; vomiting; belly pain; poor appetite; fatigue; dehydration; blood sugar normal; oxygen normal | Reviewed input received | Fever is a possible-infection warning; clear urine excluded. |
+| Dehydration | Headache; dizziness; nausea; vomiting; diarrhea; belly pain; poor appetite; fatigue; blood sugar normal; oxygen normal | Reviewed input received | Dehydration remains a possible diagnosis, not a symptom-question card; clear urine and normal pulse are excluded. |
+| Food intolerance | Headache; nausea; vomiting; diarrhea; belly pain; poor appetite; fatigue; urine clear; blood sugar normal; pulse normal; oxygen normal | Reviewed input received | Secondary features should be weaker than gastrointestinal clues. |
+| Heat exhaustion | Headache; dizziness; nausea; vomiting; belly pain; poor appetite; fatigue; blood sugar normal; oxygen normal | Reviewed input received | Clear urine and normal pulse excluded. |
+| Influenza-like illness | Fever; cough; runny nose; sore throat; shortness of breath; chest pain; headache; dizziness; nausea; vomiting; diarrhea; belly pain; poor appetite; fatigue; urine clear; blood sugar normal | Reviewed input received | Chest pain and dyspnea are warning features; pulse and oxygen are not assumed normal. |
+| Inner-ear vertigo | Headache; dizziness; nausea; vomiting; poor appetite; fatigue; urine clear; blood sugar normal; pulse normal; oxygen normal | Reviewed input received | Prolonged vomiting can cause dehydration, but it is not represented as a symptom card. |
+| Kidney stone | Fever; dizziness; nausea; vomiting; belly pain; poor appetite; fatigue; blood sugar normal; oxygen normal | Reviewed input received | Fever is a possible-infection warning; clear urine excluded. |
 | Laryngitis | Fever; cough; runny nose; sore throat; headache; poor appetite; fatigue; urine clear; blood sugar normal; pulse normal; oxygen normal | Reviewed input received | Hoarseness/voice loss is a critical missing future card. |
-| Low blood sugar | Headache; dizziness; nausea; vomiting; poor appetite; fatigue; dehydration; urine clear; pulse normal; oxygen normal | Reviewed input received | Blood sugar normal excluded; shaking, sweating, and hunger are missing future cards. |
-| Migraine | Headache; dizziness; light sensitivity; nausea; vomiting; belly pain; poor appetite; fatigue; dehydration; urine clear; blood sugar normal; pulse normal; oxygen normal | Reviewed input received | Belly pain is weaker and most relevant to abdominal migraine/pediatric presentations. |
+| Low blood sugar | Headache; dizziness; nausea; vomiting; poor appetite; fatigue; urine clear; pulse normal; oxygen normal | Reviewed input received | Blood sugar normal excluded; shaking, sweating, and hunger are missing future cards. |
+| Migraine | Headache; dizziness; light sensitivity; nausea; vomiting; belly pain; poor appetite; fatigue; urine clear; blood sugar normal; pulse normal; oxygen normal | Reviewed input received | Belly pain is weaker and most relevant to abdominal migraine/pediatric presentations. |
 | Panic attack | Shortness of breath; chest pain; headache; dizziness; nausea; belly pain; fatigue; urine clear; blood sugar normal; oxygen normal | Reviewed input received | Normal pulse excluded; oxygen usually remains normal. |
-| Pneumonia | Fever; cough; runny nose; sore throat; wheezing; shortness of breath; chest pain; headache; dizziness; nausea; vomiting; belly pain; poor appetite; fatigue; dehydration; urine clear; blood sugar normal | Reviewed input received | Pulse and oxygen are not assumed normal; abdominal features are especially possible in children. |
+| Pneumonia | Fever; cough; runny nose; sore throat; wheezing; shortness of breath; chest pain; headache; dizziness; nausea; vomiting; belly pain; poor appetite; fatigue; urine clear; blood sugar normal | Reviewed input received | Pulse and oxygen are not assumed normal; abdominal features are especially possible in children. |
 | Poor sleep | Headache; dizziness; nausea; poor appetite; fatigue; urine clear; blood sugar normal; pulse normal; oxygen normal | Reviewed input received | Nausea should be weaker than fatigue and headache. |
 | Seasonal allergies | Cough; runny nose; sore throat; wheezing; shortness of breath; headache; itchy eyes; swelling; fatigue; urine clear; blood sugar normal; pulse normal; oxygen normal | Reviewed input received | Respiratory features mainly apply with asthma; swelling means mild eye puffiness. |
 | Acute sinusitis | Fever; cough; runny nose; sore throat; headache; dizziness; nausea; poor appetite; swelling; fatigue; urine clear; blood sugar normal; pulse normal; oxygen normal | Reviewed input received | Swelling means facial pressure/puffiness; dizziness and nausea are weaker. |
-| Viral gastroenteritis | Fever; headache; dizziness; nausea; vomiting; diarrhea; belly pain; poor appetite; fatigue; dehydration; urine clear; blood sugar normal; oxygen normal | Reviewed input received | Core features are nausea, vomiting, diarrhea, and belly pain. |
+| Viral gastroenteritis | Fever; headache; dizziness; nausea; vomiting; diarrhea; belly pain; poor appetite; fatigue; urine clear; blood sugar normal; oxygen normal | Reviewed input received | Core features are nausea, vomiting, diarrhea, and belly pain. |
 | Strep throat | Fever; sore throat; headache; nausea; vomiting; belly pain; poor appetite; rash; swelling; fatigue; urine clear; blood sugar normal; pulse normal; oxygen normal | Reviewed input received | Abdominal features are pediatric; rash represents scarlet fever; swelling means tonsils/nodes. |
 | Tension headache | Headache; dizziness; nausea; poor appetite; fatigue; urine clear; blood sugar normal; pulse normal; oxygen normal | Reviewed input received | Dizziness and nausea are weaker; light sensitivity remains NO. |
-| Urinary infection | Fever; headache; dizziness; nausea; vomiting; belly pain; poor appetite; fatigue; dehydration; blood sugar normal; oxygen normal | Reviewed input received | Represents broader/upper infection; urinary and flank-pain cards are missing. |
+| Urinary infection | Fever; headache; dizziness; nausea; vomiting; belly pain; poor appetite; fatigue; blood sugar normal; oxygen normal | Reviewed input received | Represents broader/upper infection; urinary and flank-pain cards are missing. |
 
 ## Scenario and differential review list
 
@@ -126,7 +125,7 @@ Please address these before general line editing:
 - Some pediatric scenarios include adult-oriented or low-plausibility distractors. Review ages 11, 12, 15, 16, and 17 specifically.
 - Chest pain, shortness of breath, swelling, hypoxia, and allergic-reaction content may require stronger fictional framing or safety language despite the game disclaimer.
 - The binary profiles currently treat an unlisted symptom as definitively absent. Confirm which negatives are essential for deduction and which would teach an unsafe oversimplification.
-- Confirm that each scenario's authored answer is supportable from the complete 24-answer profile, not merely from its one-sentence introduction.
+- Confirm that each scenario's authored answer is supportable from the complete 23-answer profile, not merely from its one-sentence introduction.
 
 ## Structural interpretation implemented in the game
 
@@ -135,11 +134,11 @@ Please address these before general line editing:
 - A NO result is never described as proof that a person with the condition cannot have that symptom.
 - The results explanation states that another person with the same condition could have a different combination of findings.
 - Proposed hoarseness, voice-loss, shaking, sweating, hunger, painful-urination, frequency, urgency, flank-pain, and abnormal-urine cards remain future content. They should not be added until their YES/NO behavior is reviewed across all 24 diagnosis profiles.
-- The reviewed 24-card data contains three exact profile collisions: Appendicitis/Viral gastroenteritis, Common cold/Laryngitis, and Poor sleep/Tension headache. Colliding pairs are not offered in the same match because the existing cards cannot distinguish them.
+- The reviewed 23-card data contains three exact profile collisions: Appendicitis/Viral gastroenteritis, Common cold/Laryngitis, and Poor sleep/Tension headache. Colliding pairs are not offered in the same match because the existing cards cannot distinguish them.
 
 ## Final sign-off
 
-- [x] All 24 questions reviewed.
+- [x] All 23 questions reviewed.
 - [x] All 24 diagnosis profiles reviewed, including implicit NO answers.
 - [x] All 25 authored answers reviewed.
 - [x] All 25 eight-option differentials reviewed.

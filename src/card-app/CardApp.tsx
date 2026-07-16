@@ -833,7 +833,7 @@ function ResultsScreen({ model, actions }: ScreenProps) {
           <p className="playful-kicker">Case explanation</p>
           <h2>Why the evidence fits</h2>
           <p>{results.explanation}</p>
-          <p className="education-note">This explanation applies only to this authored fictional case.</p>
+          <p className="education-note">Symptoms vary from person to person. Meducktion is educational fiction, not medical advice or a diagnostic tool.</p>
         </article>
         <article className="paths-card">
           <p className="playful-kicker">Match recap</p>
