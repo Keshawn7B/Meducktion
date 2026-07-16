@@ -45,12 +45,12 @@ describe("player-facing card table", () => {
     const card = screen.getAllByRole("button", { name: /question:/i })[0]!;
     await user.click(card);
     expect(card).toHaveAttribute("aria-pressed", "true");
-    await user.click(screen.getByRole("button", { name: "Lock Card" }));
+    await user.click(screen.getByRole("button", { name: "Reveal Card" }));
     expect(screen.getAllByRole("button", { name: /question:/i })).toHaveLength(3);
-    const unlock = screen.queryByRole("button", { name: "Unlock Card" });
+    const unlock = screen.queryByRole("button", { name: "Take Back Card" });
     if (unlock !== null) {
       await user.click(unlock);
-      expect(screen.getByRole("button", { name: "Lock Card" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Reveal Card" })).toBeInTheDocument();
     }
     expect(screen.queryByRole("button", { name: "Reveal Cards" })).not.toBeInTheDocument();
   });

@@ -135,10 +135,10 @@ function statusForMatch(
         return current ? `Waiting for ${current.displayName} to play.` : "Waiting for the next turn.";
       }
       return player.hand.selectedCardInstanceId
-        ? "Card selected. Change it or lock it in."
+        ? "Card selected. Change it or reveal it."
         : "Choose one investigation card for this round.";
     case "cards_locked":
-      return "Everyone is locked. Revealing automatically…";
+      return "Everyone has played. Revealing automatically…";
     case "card_reveal":
     case "clue_review":
       return "New YES and NO evidence is being placed on the table.";

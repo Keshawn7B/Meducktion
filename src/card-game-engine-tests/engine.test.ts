@@ -680,8 +680,9 @@ describe("diagnosis race", () => {
     });
     expect(state.players["player.one"]?.diagnosisAttemptsUsed).toBe(3);
     expect(state.players["player.one"]?.finalDiagnosisSubmitted).toBe(true);
-    expect(state.phase).toBe("diagnosis_window");
-    expect(state.result).toBeNull();
+    expect(state.phase).toBe("match_complete");
+    expect(state.result?.winnerPlayerIds).toEqual(["player.two"]);
+    expect(state.result?.winningTieBreak).toBe("only_player");
   });
 
   it("finishes a limited match with no winner after the final round", () => {
@@ -695,6 +696,25 @@ describe("diagnosis race", () => {
     expect(result.errors).toEqual([]);
     expect(result.state.phase).toBe("match_complete");
     expect(result.state.result?.winnerPlayerIds).toEqual([]);
+  });
+
+  it("awards the win to the last player remaining after an elimination", () => {
+    const state = diagnosisState(4);
+    const eliminated = state.players["player.one"];
+    if (!eliminated) throw new Error("Missing elimination fixture player.");
+    eliminated.diagnosisAttemptsUsed = 2;
+    eliminated.diagnosisLockedUntilRound = null;
+    eliminated.hiddenClueAnswers = ["yes", "no"];
+
+    const result = run(state, {
+      type: "SUBMIT_DIAGNOSIS",
+      playerId: "player.one",
+      conditionId: wrongConditionIds[0]!,
+      clueIds: [],
+    });
+    expect(result.phase).toBe("match_complete");
+    expect(result.result?.winnerPlayerIds).toEqual(["player.two"]);
+    expect(result.result?.winningTieBreak).toBe("only_player");
   });
 
   it("records a correct diagnosis and prevents resubmission", () => {

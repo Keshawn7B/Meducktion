@@ -22,7 +22,7 @@ This section is the authoritative description of the currently mounted game. Old
 
 The default mode is the shared-patient competitive card game. Two to four players investigate the same fictional case, choose one of three question cards, and reveal authored answers into their own private YES and NO evidence piles. Local play uses one deterministic bot; private online rooms use the same engine and session contract for human players.
 
-Players take card turns in seat order, and the starting seat rotates each round so the same player does not always act first. Only the active player may choose, redraw, or lock; locking passes play to the next active seat. Locking remains reversible until the next player begins choosing. When the final active player locks, the round reveals automatically, places each answer into its owner's private pile, and prepares the next hand. There is no separate Reveal, Review Clues, or Keep Investigating gate. A player may diagnose from Round 1. A limited match ends without a winner if Round 10 finishes without a correct diagnosis; an unlimited match continues until someone wins or all players are eliminated.
+Players take card turns in seat order, and the starting seat rotates each round so the same player does not always act first. Only the active player may choose, redraw, or reveal a card; revealing passes play to the next active seat. The choice remains reversible until the next player begins choosing. When the final active player reveals, the round resolves automatically, places each answer into its owner's private pile, and prepares the next hand. A player may diagnose from Round 1. A limited match ends without a winner if Round 10 finishes without a correct diagnosis. If eliminations leave only one player, that remaining player wins immediately.
 
 Question cards use short, generic symptom and homeostasis checks such as `Fever?`, `Nausea?`, `Urine clear?`, `Blood sugar normal?`, and `Cough?`. Their case-specific YES or NO answer is fixed case content, never random medical truth. Ask, Check, and Test are presentation types only; the active decks contain no Special cards and no cards that directly reveal the diagnosis.
 
@@ -33,7 +33,7 @@ Twenty-five fictional deduction cases are currently registered. They share a 24-
 - Each player's results appear in separate private YES and NO piles with the original question and authored answer.
 - Question cards use a large text-first face with no illustration or visibility label, keeping the question readable at desktop and mobile sizes.
 - Card copy stays inside the portrait face because only the short question and YES/NO outcome preview are shown.
-- Selecting a card visually mutes the other two without disabling them, so the player can still change their choice before locking.
+- Selecting a card visually mutes the other two without disabling them, so the player can still change their choice before revealing it.
 - Opponent answers remain hidden; only the played question type and the fact that an answer was received are shown.
 - Local setup exposes the full case registry. An online room randomly selects one registered case when created and pins it for the active match; rematches exclude the immediately previous case.
 - Online `Play Again` resets the completed match to the same lobby instead of deleting the room or returning home.
@@ -164,7 +164,7 @@ match_intro
 → match_complete
 ```
 
-Selection may change before locking and never reveals an answer. Card selection proceeds through `playerOrder`, with off-turn card commands rejected. After every active player has locked once, reveal places a private YES or NO answer for each played question and draws active hands back to three. A player eliminated by a third wrong diagnosis no longer participates in card rounds.
+Selection may change before revealing and does not expose the answer until the round resolves. Card selection proceeds through `playerOrder`, with off-turn card commands rejected. After every active player has revealed one card, resolution places a private YES or NO answer for each played question and draws active hands back to three. A player eliminated by a third wrong diagnosis no longer participates in card rounds.
 
 The match ends immediately when the first correct diagnosis command is accepted. If nobody solves it by the final required calls, the case ends without a winner. Completion reveals the authored answer, investigation paths, winner feedback, and a beginner-friendly educational explanation. Every diagnosis now has its own concise definition and list of common symptoms; a separate note makes clear that symptoms vary and that the game is not a diagnostic tool.
 
@@ -224,7 +224,7 @@ This remains an unranked, trusted-room MVP. The complete deterministic session c
 
 ### Production Firestore status
 
-The room rules were compiled and deployed to Firebase project `meducktion` on July 14, 2026. Emulator coverage verifies authenticated lobby joins, own-readiness updates, host-only starts, deterministic host transfer, member-scoped presence heartbeats, timed-out seat replacement, active member transitions, and denial of unauthenticated or outsider access. A disposable production smoke test used two isolated anonymous users to create and join a room, ready the guest, create the pinned all-human session, start the match, select and lock cards from both clients, observe the synchronized `cards_locked` phase, and delete the room afterward.
+The room rules were compiled and deployed to Firebase project `meducktion` on July 14, 2026. Emulator coverage verifies authenticated lobby joins, own-readiness updates, host-only starts, deterministic host transfer, member-scoped presence heartbeats, timed-out seat replacement, active member transitions, and denial of unauthenticated or outsider access. A disposable production smoke test used two isolated anonymous users to create and join a room, ready the guest, create the pinned all-human session, start the match, play cards from both clients, observe the synchronized reveal transition, and delete the room afterward.
 
 ### Final multiplayer polish
 
@@ -258,7 +258,7 @@ The first safe v2 rules slice addresses fairness and match completion without re
 
 - Players choose cards sequentially in seat order; after everyone has taken a turn, the locked cards resolve together. Each player receives their own private copy of the authored YES/NO answer, even when opponents chose the same question.
 - Using the second diagnosis attempt no longer removes a player from card play. They continue investigating for discovery points.
-- A ten-round match ends with no winner if Round 10 finishes without a correct diagnosis. Unlimited rooms continue until a player wins or all players are eliminated.
+- A ten-round match ends with no winner if Round 10 finishes without a correct diagnosis. Unlimited rooms continue until someone diagnoses correctly or eliminations leave one player, who wins immediately.
 - First place is always unique. The engine records the actual ranking criterion, and the results screen explains it.
 
 Remaining v2 work is deliberately staged rather than folded into this narrow engine migration. A variable hidden diagnosis requires a fully authored and medically reviewed clue matrix for every possible outcome. Player-controlled keep/swap decisions, choice-driven event cards, weighted evidence, revised positive scoring, public Test cards, generic Tactics, bot strategy changes, and result-aware bad-luck protection remain unimplemented. Those changes affect content contracts, balance, tutorial copy, and saved-state compatibility and should be developed as a separately versioned slice with dedicated playtesting.

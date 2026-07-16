@@ -135,6 +135,33 @@ describe("multiplayer room protocol", () => {
     expect(room.session?.matchState.phase).toBe("next_round");
   });
 
+  it("marks an online room complete when one player remains after elimination", () => {
+    let room = setMemberReady(joinRoomRecord(created(), "guest", "Guest", 2_000), "guest", true);
+    const state = createCardMatch(thePainThatMovedCardCase, { seed: room.seed, players: [
+      { id: "host", displayName: "Host", kind: "human" },
+      { id: "guest", displayName: "Guest", kind: "human" },
+    ] });
+    state.phase = "diagnosis_window";
+    state.currentRound = 4;
+    const host = state.players.host;
+    if (!host) throw new Error("Missing online elimination fixture.");
+    host.diagnosisAttemptsUsed = 2;
+    host.hiddenClueAnswers = ["yes", "no"];
+    const wrongConditions = thePainThatMovedCardCase.conditions.filter(
+      (condition) => condition.id !== thePainThatMovedCardCase.correctConditionId,
+    );
+    room = startRoomRecord(room, "host", createCardMatchSession(state, room.roomId), 3_000);
+    room = applyRoomCommand(room, "host", {
+      commandId: "host-third-miss",
+      commandSequence: 1,
+      expectedRevision: 0,
+      command: { type: "SUBMIT_DIAGNOSIS", playerId: "host", conditionId: wrongConditions[0]!.id, clueIds: [] },
+    }, 4_000);
+    expect(room.status).toBe("complete");
+    expect(room.session?.matchState.result?.winnerPlayerIds).toEqual(["guest"]);
+    expect(room.session?.matchState.result?.winningTieBreak).toBe("only_player");
+  });
+
   it("replaces a departing active player with a deterministic bot", () => {
     let room = joinRoomRecord(created(), "guest", "Guest", 2_000);
     room = setMemberReady(room, "guest", true);

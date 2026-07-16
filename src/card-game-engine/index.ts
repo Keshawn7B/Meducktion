@@ -1186,6 +1186,16 @@ function firstCorrectPlayerId(state: MatchState): string | null {
   ) ?? null;
 }
 
+function allPlayersEliminated(state: MatchState): boolean {
+  return state.playerOrder.length > 0 && state.playerOrder.every((playerId) => {
+    const player = state.players[playerId];
+    return player !== undefined &&
+      player.correctDiagnosisRound === null &&
+      player.diagnosisAttemptsUsed >= 3 &&
+      player.finalDiagnosisSubmitted;
+  });
+}
+
 export function transitionCardGame(
   content: CardCaseContent,
   original: MatchState,
@@ -1354,7 +1364,7 @@ export function transitionCardGame(
       return fail(original, "CARD_ALREADY_LOCKED", "The card is already locked.");
     }
     if (player.hand.selectedCardInstanceId === null) {
-      return fail(original, "CARD_NOT_SELECTED", "Select a card before locking.");
+      return fail(original, "CARD_NOT_SELECTED", "Select a card before revealing it.");
     }
     player.hand.locked = true;
     emit(state, events, "card_locked", [player.id], { bot: false });
@@ -1595,7 +1605,13 @@ export function transitionCardGame(
       finishMatch(content, state, events, winnerPlayerId);
       return complete(original, state, events);
     }
-    if (state.playerOrder.every((id) => state.players[id]?.finalDiagnosisSubmitted)) {
+    const remainingPlayers = activePlayers(state);
+    if (remainingPlayers.length === 1 && state.playerOrder.length > 1) {
+      finishMatch(content, state, events, remainingPlayers[0]!.id);
+      if (state.result) state.result.winningTieBreak = "only_player";
+      return complete(original, state, events);
+    }
+    if (allPlayersEliminated(state)) {
       finishMatch(content, state, events);
     }
     return complete(original, state, events);
@@ -1611,9 +1627,15 @@ export function transitionCardGame(
       finishMatch(content, state, events, winnerPlayerId);
       return complete(original, state, events);
     }
+    const remainingPlayers = activePlayers(state);
+    if (remainingPlayers.length === 1 && state.playerOrder.length > 1) {
+      finishMatch(content, state, events, remainingPlayers[0]!.id);
+      if (state.result) state.result.winningTieBreak = "only_player";
+      return complete(original, state, events);
+    }
     if (
       isFinalRound(state) ||
-      state.playerOrder.every((id) => state.players[id]?.finalDiagnosisSubmitted)
+      allPlayersEliminated(state)
     ) {
       finishMatch(content, state, events);
     } else {
@@ -1639,7 +1661,7 @@ export function transitionCardGame(
     if (
       state.phase !== "diagnosis_window" ||
       (!isFinalRound(state) &&
-        !state.playerOrder.every((id) => state.players[id]?.finalDiagnosisSubmitted))
+        !allPlayersEliminated(state))
     ) {
       return fail(original, "INVALID_PHASE", "The match cannot be completed yet.");
     }

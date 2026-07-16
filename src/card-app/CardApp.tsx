@@ -51,7 +51,7 @@ const tutorialPanels = [
   {
     eyebrow: "Choose carefully",
     title: "Play one card each round",
-    body: "Pick an Ask, Check, or Test question. Every card gives you a private YES or NO answer. You can change your selection before locking.",
+    body: "Pick an Ask, Check, or Test question. Every card gives you a private YES or NO answer. You can change your selection before revealing it.",
     symbol: "1",
   },
   {
@@ -512,7 +512,7 @@ function MatchScreen({
             ) : (
               <div className="empty-reveal">
                 <span aria-hidden="true">&#x21bb;</span>
-                <p>Locked cards will be revealed here.</p>
+                <p>Played cards will be revealed here.</p>
               </div>
             )}
           </section>
@@ -580,12 +580,12 @@ function MatchScreen({
                 disabled={!selectedCard || onlineBlocked}
                 onClick={actions.lockCard}
               >
-                Lock Card
+                Reveal Card
               </button>
             )}
             {match.canUnlock && (
               <button className="button button-cream button-large" disabled={onlineBlocked} onClick={actions.unlockCard}>
-                Unlock Card
+                Take Back Card
               </button>
             )}
           </div>}
@@ -615,7 +615,7 @@ function MatchScreen({
 }
 
 function InvestigationCard({ card, onToggle }: { card: CardView; onToggle: () => void }) {
-  const label = `${categoryLabels[card.category]} question: ${card.title}. Reveals YES or NO${card.selected ? ". Selected" : ""}${card.locked ? ". Locked" : ""}`;
+  const label = `${categoryLabels[card.category]} question: ${card.title}. Reveals YES or NO${card.selected ? ". Selected" : ""}${card.locked ? ". Played" : ""}`;
   return (
     <button
       type="button"
@@ -639,9 +639,9 @@ function InvestigationCard({ card, onToggle }: { card: CardView; onToggle: () =>
         <b>YES</b><i>or</i><b>NO</b>
       </span>
       {card.beginnerHint && <small>{card.beginnerHint}</small>}
-      {card.locked && <span className="locked-badge">Locked</span>}
+      {card.locked && <span className="locked-badge">Played</span>}
       <span className="card-select-label">
-        {card.locked ? "Locked" : card.selected ? "Selected \u00b7 tap to change" : "Choose this card"}
+        {card.locked ? "Played" : card.selected ? "Selected \u00b7 tap to change" : "Choose this card"}
       </span>
     </button>
   );

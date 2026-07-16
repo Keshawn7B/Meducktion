@@ -141,7 +141,7 @@ function model(screen: CardAppModel["screen"], patch?: Partial<CardAppModel["mat
       canReveal: false,
       revealActionLabel: "Reveal Cards",
       canAdvance: false,
-      statusMessage: "Choose one card, then lock it in.",
+      statusMessage: "Choose one card, then reveal it.",
       ...patch,
     },
     results: null,
@@ -260,7 +260,7 @@ describe("competitive card-game UI", () => {
     expect(screen.getByRole("button", { name: /Check question: Tender abdomen.*Selected/i })).toHaveClass("is-selected");
     await user.click(screen.getByRole("button", { name: /Ask question: Did the pain move/i }));
     expect(calls.toggleCard).toHaveBeenCalledWith("card.ask.pain-move");
-    await user.click(screen.getByRole("button", { name: "Lock Card" }));
+    await user.click(screen.getByRole("button", { name: "Reveal Card" }));
     expect(calls.lockCard).toHaveBeenCalledOnce();
   });
 
@@ -286,7 +286,7 @@ describe("competitive card-game UI", () => {
     })} actions={actions()} />);
     expect(screen.getByText("Bailey's turn")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Redraw hand/i })).toBeDisabled();
-    expect(screen.queryByRole("button", { name: "Lock Card" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reveal Card" })).not.toBeInTheDocument();
   });
 
   it("labels unlimited matches without putting round progress on the patient", () => {
@@ -324,9 +324,9 @@ describe("competitive card-game UI", () => {
     render(<CardApp model={model("match", { hand: lockedHand, canLock: false, canUnlock: true, canReveal: false, phase: "card_selection" })} actions={actions()} />);
     expect(screen.getAllByRole("button", { name: /question:/i })).toHaveLength(3);
     expect(screen.getByText("Ask Jordan how the pain changed.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Tender abdomen.*Locked/i })).toHaveClass("is-locked");
-    expect(screen.getAllByText("Locked").length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: "Unlock Card" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Tender abdomen.*Played/i })).toHaveClass("is-locked");
+    expect(screen.getAllByText("Played").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Take Back Card" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Reveal Cards" })).not.toBeInTheDocument();
   });
 
@@ -339,7 +339,7 @@ describe("competitive card-game UI", () => {
 
     const unlockCalls = actions();
     rerender(<CardApp model={model("match", { canLock: false, canUnlock: true, canReveal: false })} actions={unlockCalls} />);
-    await user.click(screen.getByRole("button", { name: "Unlock Card" }));
+    await user.click(screen.getByRole("button", { name: "Take Back Card" }));
     expect(unlockCalls.unlockCard).toHaveBeenCalledOnce();
     expect(screen.queryByRole("button", { name: "Reveal Cards" })).not.toBeInTheDocument();
   });
@@ -363,7 +363,7 @@ describe("competitive card-game UI", () => {
     };
     render(<CardApp model={syncingModel} actions={actions()} />);
     expect(screen.getByRole("status")).toHaveTextContent("Room ABC234 Syncing");
-    expect(screen.getByRole("button", { name: "Lock Card" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Reveal Card" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Diagnose" })).toBeDisabled();
   });
 
