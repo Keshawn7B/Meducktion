@@ -15,7 +15,8 @@ export function createRoomRecord(input: CreateMultiplayerRoomInput): Multiplayer
   return {
     schemaVersion: "meducktion-room-v1", roomId: input.roomId.toUpperCase(), status: "lobby",
     hostUid: input.hostUid, memberUids: [input.hostUid], members: { [input.hostUid]: host },
-    maximumPlayers: input.maximumPlayers, caseId: input.caseId, contentVersion: input.contentVersion,
+    maximumPlayers: input.maximumPlayers, maximumRounds: input.maximumRounds,
+    caseId: input.caseId, contentVersion: input.contentVersion,
     seed: input.seed, session: null, revision: 0, createdAt: input.now, expiresAt: input.now + DAY,
   };
 }

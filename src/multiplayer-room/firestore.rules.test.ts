@@ -9,7 +9,7 @@ import { applyRoomCommand, createRoomRecord, joinRoomRecord, leaveRoomRecord, ma
 import { FirestoreMultiplayerRoomRepository } from "./firestoreRepository";
 
 let environment: RulesTestEnvironment;
-const room = createRoomRecord({ roomId: "RULES1", hostUid: "host", hostDisplayName: "Host", maximumPlayers: 4, caseId: "case.the-pain-that-moved", contentVersion: "1.0.0", seed: "rules", now: 1_000 });
+const room = createRoomRecord({ roomId: "RULES1", hostUid: "host", hostDisplayName: "Host", maximumPlayers: 4, maximumRounds: 10, caseId: "case.the-pain-that-moved", contentVersion: "1.0.0", seed: "rules", now: 1_000 });
 const rematchCase = cardCaseRegistry.find((cardCase) => cardCase.caseId !== thePainThatMovedCardCase.caseId)!;
 
 beforeAll(async () => {
@@ -22,6 +22,24 @@ beforeEach(async () => {
 afterAll(async () => environment.cleanup());
 
 describe("Firestore multiplayer room rules", () => {
+  it("allows a host to create an unlimited-round lobby", async () => {
+    const unlimited = createRoomRecord({
+      roomId: "NOEND1",
+      hostUid: "host",
+      hostDisplayName: "Host",
+      maximumPlayers: 4,
+      maximumRounds: null,
+      caseId: "case.the-pain-that-moved",
+      contentVersion: "1.0.0",
+      seed: "unlimited-rules",
+      now: 1_000,
+    });
+    await assertSucceeds(setDoc(
+      doc(environment.authenticatedContext("host").firestore(), "rooms", unlimited.roomId),
+      unlimited,
+    ));
+  });
+
   it("allows an authenticated guest to read and join a lobby", async () => {
     const firestore = environment.authenticatedContext("guest").firestore();
     await assertSucceeds(getDoc(doc(firestore, "rooms", room.roomId)));

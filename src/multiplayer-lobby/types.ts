@@ -14,6 +14,7 @@ export interface MultiplayerLobbyModel {
   readonly roomCode?: string;
   readonly caseTitle?: string;
   readonly maximumPlayers: 2 | 3 | 4;
+  readonly maximumRounds: 10 | null;
   readonly isHost: boolean;
   readonly currentPlayerReady: boolean;
   readonly canStart: boolean;
@@ -21,7 +22,7 @@ export interface MultiplayerLobbyModel {
 }
 
 export interface MultiplayerLobbyActions {
-  readonly createRoom: (displayName: string, maximumPlayers: 2 | 3 | 4) => Promise<void>;
+  readonly createRoom: (displayName: string, maximumPlayers: 2 | 3 | 4, maximumRounds: 10 | null) => Promise<void>;
   readonly joinRoom: (displayName: string, roomCode: string) => Promise<void>;
   readonly toggleReady: () => Promise<void>;
   readonly startLobby: () => Promise<void>;

@@ -130,6 +130,10 @@ function statusForMatch(
     case "round_draw":
       return "Drawing each player's cards…";
     case "card_selection":
+      if (state.currentTurnPlayerId !== player.id) {
+        const current = state.players[state.currentTurnPlayerId ?? ""];
+        return current ? `Waiting for ${current.displayName} to play.` : "Waiting for the next turn.";
+      }
       return player.hand.selectedCardInstanceId
         ? "Card selected. Change it or lock it in."
         : "Choose one investigation card for this round.";
@@ -148,9 +152,7 @@ function statusForMatch(
       ) {
         return "Your next diagnosis attempt unlocks next round.";
       }
-      return state.currentRound >= state.maximumRounds
-        ? "Make the required final diagnosis."
-        : "Diagnose now or continue to the next round.";
+      return "Diagnose now or continue to the next round.";
     case "next_round":
       return "The next round is ready.";
     case "match_complete":
@@ -199,6 +201,26 @@ export function buildCardAppModel(
 ): CardAppModel {
   const state = session?.matchState;
   const human = state?.players[playerId];
+  const currentTurnPlayerId = state?.currentTurnPlayerId
+    ?? state?.playerOrder.find((id) => {
+      const player = state.players[id];
+      return player !== undefined && !player.finalDiagnosisSubmitted && !player.hand.locked;
+    })
+    ?? null;
+  const isYourTurn = currentTurnPlayerId === playerId;
+  const activeTurnOrder = state
+    ? [
+        ...state.playerOrder.slice(Math.max(0, state.currentRound - 1) % state.playerOrder.length),
+        ...state.playerOrder.slice(0, Math.max(0, state.currentRound - 1) % state.playerOrder.length),
+      ].filter((id) => !state.players[id]?.finalDiagnosisSubmitted)
+    : [];
+  const currentTurnIndex = currentTurnPlayerId
+    ? activeTurnOrder.indexOf(currentTurnPlayerId)
+    : activeTurnOrder.length;
+  const previousTurnPlayerId = activeTurnOrder[currentTurnIndex - 1] ?? null;
+  const nextPlayerHasStarted = currentTurnPlayerId
+    ? state?.players[currentTurnPlayerId]?.hand.selectedCardInstanceId !== null
+    : false;
   const diagnosisConditions = state
     ? getDiagnosisConditionOptions(content, state)
     : content.conditions;
@@ -324,7 +346,9 @@ export function buildCardAppModel(
     })),
     match: {
       round: state?.currentRound ?? 1,
-      maximumRounds: state?.maximumRounds ?? 10,
+      maximumRounds: state ? state.maximumRounds : 10,
+      currentTurnName: state?.players[currentTurnPlayerId ?? ""]?.displayName ?? "No active player",
+      isYourTurn,
       phase: viewPhase(state?.phase ?? "round_draw"),
       seedLabel: state?.seed ?? "not-started",
       hand:
@@ -343,6 +367,7 @@ export function buildCardAppModel(
             dimmed: human.hand.selectedCardInstanceId !== null && !selected,
             disabled:
               state?.phase !== "card_selection" ||
+              !isYourTurn ||
               human.correctDiagnosisRound !== null,
           };
         }) ?? [],
@@ -364,6 +389,8 @@ export function buildCardAppModel(
                 : ("diagnosed" as const)
               : opponent?.hand.locked
                 ? ("locked" as const)
+                : state.phase === "card_selection" && currentTurnPlayerId !== opponentId
+                  ? ("waiting" as const)
                 : state.phase === "card_reveal" ||
                     state.phase === "clue_review" ||
                     state.phase === "diagnosis_window"
@@ -453,24 +480,17 @@ export function buildCardAppModel(
       humanEliminated:
         human?.finalDiagnosisSubmitted === true &&
         human.correctDiagnosisRound === null,
-      mustDiagnose:
-        state?.phase === "diagnosis_window" &&
-        state.currentRound >= state.maximumRounds &&
-        human !== undefined &&
-        human.correctDiagnosisRound === null &&
-        human.diagnosisAttemptsUsed < 3 &&
-        !human.pendingCluePenaltyChoice &&
-        !human.diagnosisSubmissions.some(
-          (submission) => submission.round === state.currentRound,
-        ),
       canLock:
         state?.phase === "card_selection" &&
+        isYourTurn &&
         human?.correctDiagnosisRound === null &&
         human?.finalDiagnosisSubmitted === false &&
         !human?.pendingCluePenaltyChoice &&
         !human.hand.locked,
       canUnlock:
-        state?.phase === "card_selection" &&
+        (state?.phase === "card_selection" || state?.phase === "cards_locked") &&
+        previousTurnPlayerId === playerId &&
+        !nextPlayerHasStarted &&
         human?.correctDiagnosisRound === null &&
         human?.finalDiagnosisSubmitted === false &&
         !human?.pendingCluePenaltyChoice &&
@@ -485,17 +505,7 @@ export function buildCardAppModel(
         state?.phase === "diagnosis_window" &&
         human?.finalDiagnosisSubmitted !== true &&
         !human?.pendingCluePenaltyChoice &&
-        !(state.diagnosisPassedPlayerIds ?? []).includes(playerId) &&
-        !(
-          state.currentRound >= state.maximumRounds &&
-          human !== undefined &&
-          human.correctDiagnosisRound === null &&
-          human.diagnosisAttemptsUsed < 3 &&
-          !human.pendingCluePenaltyChoice &&
-          !human.diagnosisSubmissions.some(
-            (submission) => submission.round === state.currentRound,
-          )
-        ),
+        !(state.diagnosisPassedPlayerIds ?? []).includes(playerId),
       statusMessage: statusForMatch(state, human, statusMessage),
     },
     results,
@@ -656,7 +666,7 @@ export function useCardMatch(): CardMatchController {
       if (!run.errorMessage && run.session.matchState.phase === "clue_review") {
         run = runCommands(run.session, [{ type: "OPEN_DIAGNOSIS_WINDOW" }]);
       }
-      if (!run.errorMessage && run.session.matchState.phase === "diagnosis_window" && run.session.matchState.currentRound < run.session.matchState.maximumRounds) {
+      if (!run.errorMessage && run.session.matchState.phase === "diagnosis_window") {
         run = runCommands(run.session, [{ type: "CONTINUE_FROM_DIAGNOSIS" }]);
         if (!run.errorMessage && run.session.matchState.phase === "next_round") {
           run = runCommands(run.session, [{ type: "ADVANCE_ROUND" }, { type: "DRAW_CARDS" }]);

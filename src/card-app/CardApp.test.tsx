@@ -41,6 +41,8 @@ function model(screen: CardAppModel["screen"], patch?: Partial<CardAppModel["mat
     match: {
       round: 2,
       maximumRounds: 10,
+      currentTurnName: "Detective",
+      isYourTurn: true,
       phase: "card_selection",
       seedLabel: "friendly-owl",
       hand: [
@@ -134,7 +136,6 @@ function model(screen: CardAppModel["screen"], patch?: Partial<CardAppModel["mat
       diagnosisBlockedUntilNextRound: false,
       humanHasDiagnosed: false,
       humanEliminated: false,
-      mustDiagnose: false,
       canLock: true,
       canUnlock: false,
       canReveal: false,
@@ -245,6 +246,8 @@ describe("competitive card-game UI", () => {
     render(<CardApp model={model("match")} actions={calls} />);
     const cards = screen.getAllByRole("button", { name: /question:/i });
     expect(cards).toHaveLength(3);
+    expect(document.querySelector("#patient-card .patient-round-pips")).not.toBeInTheDocument();
+    expect(screen.getByText("Your turn")).toBeInTheDocument();
     expect(cards[0]?.parentElement).toHaveClass("card-hand");
     expect(cards.every((card) => card.classList.contains("investigation-card"))).toBe(true);
     expect(cards[0]).toHaveClass("is-dimmed");
@@ -272,6 +275,24 @@ describe("competitive card-game UI", () => {
     expect(opponentCards.children).toHaveLength(3);
     expect(opponentCards.querySelectorAll('img[src$="/assets/meducktion-medical-duck-logo.webp"]')).toHaveLength(3);
     expect(screen.getByLabelText("Meducktion card table")).toBeInTheDocument();
+  });
+
+  it("shows the active seat and disables card actions while waiting", () => {
+    render(<CardApp model={model("match", {
+      currentTurnName: "Bailey",
+      isYourTurn: false,
+      canLock: false,
+      hand: model("match").match.hand.map((card) => ({ ...card, disabled: true })),
+    })} actions={actions()} />);
+    expect(screen.getByText("Bailey's turn")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Redraw hand/i })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Lock Card" })).not.toBeInTheDocument();
+  });
+
+  it("labels unlimited matches without putting round progress on the patient", () => {
+    render(<CardApp model={model("match", { round: 14, maximumRounds: null })} actions={actions()} />);
+    expect(screen.getByLabelText("Round 14, unlimited match")).toBeInTheDocument();
+    expect(document.querySelector("#patient-card .patient-round-pips")).not.toBeInTheDocument();
   });
 
   it("covers hidden evidence and requires the first-miss pile choice", async () => {
@@ -457,5 +478,32 @@ describe("competitive card-game UI", () => {
     expect(screen.getByText(/moving pain, loss of appetite/i)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Play Again" }));
     expect(calls.playAgain).toHaveBeenCalledOnce();
+  });
+
+  it("shows no winner when a limited match expires unsolved", () => {
+    const base = model("results");
+    render(<CardApp model={{
+      ...base,
+      results: {
+        winnerName: "",
+        hiddenDiagnosisName: "Appendicitis",
+        explanation: "Appendicitis is inflammation of the appendix. Common symptoms include abdominal pain.",
+        tieBreakLabel: "",
+        rankings: [{
+          playerId: "player.human",
+          displayName: "Alex",
+          placement: 1,
+          totalScore: 0,
+          diagnosisName: "No diagnosis",
+          diagnosisCorrect: false,
+          breakdown: { correctDiagnosis: 0, supportingClues: 0, timing: 0, efficiency: 0, achievement: 0, wrongAttemptPenalties: 0 },
+          investigationPath: [],
+          isHuman: true,
+        }],
+      },
+    }} actions={actions()} />);
+    expect(screen.getByRole("heading", { name: "No winner" })).toBeInTheDocument();
+    expect(screen.getByText("No player diagnosed the case correctly.")).toBeInTheDocument();
+    expect(screen.queryByText("Winner")).not.toBeInTheDocument();
   });
 });

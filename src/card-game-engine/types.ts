@@ -181,7 +181,8 @@ export interface MatchState {
   rng: SeededRandomState;
   phase: MatchPhase;
   currentRound: number;
-  maximumRounds: number;
+  maximumRounds: number | null;
+  currentTurnPlayerId: string | null;
   playerOrder: string[];
   players: Record<string, PlayerState>;
   publicClues: PublicClue[];
@@ -199,6 +200,7 @@ export interface CreateCardMatchOptions {
   matchId?: string;
   players?: MatchPlayerSetup[];
   variantId?: string;
+  maximumRounds?: number | null;
 }
 
 export type CardGameCommand =
@@ -272,7 +274,8 @@ export interface PlayerMatchView {
   matchId: string;
   phase: MatchPhase;
   currentRound: number;
-  maximumRounds: number;
+  maximumRounds: number | null;
+  currentTurnPlayerId: string | null;
   publicClues: PublicClue[];
   sharedEvent: SharedEvent;
   latestPlays: CardPlay[];

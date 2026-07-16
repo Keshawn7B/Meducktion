@@ -17,6 +17,7 @@ export interface MultiplayerRoom {
   memberUids: string[];
   members: Record<string, MultiplayerMember>;
   maximumPlayers: 2 | 3 | 4;
+  maximumRounds: 10 | null;
   caseId: string;
   contentVersion: string;
   seed: string;
@@ -31,6 +32,7 @@ export interface CreateMultiplayerRoomInput {
   hostUid: string;
   hostDisplayName: string;
   maximumPlayers: 2 | 3 | 4;
+  maximumRounds: 10 | null;
   caseId: string;
   contentVersion: string;
   seed: string;

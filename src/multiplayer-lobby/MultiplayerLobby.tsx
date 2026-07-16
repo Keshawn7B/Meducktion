@@ -18,6 +18,7 @@ export function MultiplayerLobby({ model, actions, onExit }: MultiplayerLobbyPro
   const [displayName, setDisplayName] = useState(savedDisplayName);
   const [roomCode, setRoomCode] = useState("");
   const [maximumPlayers, setMaximumPlayers] = useState<2 | 3 | 4>(4);
+  const [maximumRounds, setMaximumRounds] = useState<10 | null>(10);
   const [copied, setCopied] = useState(false);
   const nameId = useId();
   const codeId = useId();
@@ -32,7 +33,7 @@ export function MultiplayerLobby({ model, actions, onExit }: MultiplayerLobbyPro
     event.preventDefault();
     if (validName) {
       rememberName();
-      void actions.createRoom(displayName.trim(), maximumPlayers);
+      void actions.createRoom(displayName.trim(), maximumPlayers, maximumRounds);
     }
   }
 
@@ -110,6 +111,15 @@ export function MultiplayerLobby({ model, actions, onExit }: MultiplayerLobbyPro
                   <option value={3}>3 players</option>
                   <option value={4}>4 players</option>
                 </select>
+                <label htmlFor="lobby-round-limit">Match length</label>
+                <select
+                  id="lobby-round-limit"
+                  value={maximumRounds === null ? "unlimited" : "10"}
+                  onChange={(event) => setMaximumRounds(event.target.value === "unlimited" ? null : 10)}
+                >
+                  <option value="10">10 rounds</option>
+                  <option value="unlimited">Unlimited rounds</option>
+                </select>
                 <button className="button button-primary button-large" disabled={!validName || model.busy} type="submit">
                   {model.operation === "create" ? "Creating Room..." : "Create Room"}
                 </button>
@@ -141,7 +151,7 @@ export function MultiplayerLobby({ model, actions, onExit }: MultiplayerLobbyPro
               <div>
                 <p className="playful-kicker">{model.caseTitle ?? "Medical mystery"}</p>
                 <h1 id="lobby-title">Players in this room</h1>
-                <p>{model.members.length} of {model.maximumPlayers} seats filled</p>
+                <p>{model.members.length} of {model.maximumPlayers} seats filled &middot; {model.maximumRounds === null ? "Unlimited rounds" : `${model.maximumRounds} rounds`}</p>
               </div>
               <ol className="lobby-member-list" aria-label="Room players">
                 {model.members.map((member, index) => (

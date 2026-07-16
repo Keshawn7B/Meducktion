@@ -4,11 +4,26 @@ import { createCardMatch } from "../card-game-engine";
 import { createCardMatchSession } from "../card-match-session";
 import { applyRoomCommand, createRoomRecord, generateRoomCode, joinRoomRecord, leaveRoomRecord, markRoomReadyToStart, resetCompletedRoom, setMemberReady, startRoomRecord } from ".";
 
-const created = () => createRoomRecord({ roomId: "abc123", hostUid: "host", hostDisplayName: "Host", maximumPlayers: 4, caseId: thePainThatMovedCardCase.caseId, contentVersion: thePainThatMovedCardCase.contentVersion, seed: "room-seed", now: 1_000 });
+const created = () => createRoomRecord({ roomId: "abc123", hostUid: "host", hostDisplayName: "Host", maximumPlayers: 4, maximumRounds: 10, caseId: thePainThatMovedCardCase.caseId, contentVersion: thePainThatMovedCardCase.contentVersion, seed: "room-seed", now: 1_000 });
 const rematchCase = cardCaseRegistry.find((cardCase) => cardCase.caseId !== thePainThatMovedCardCase.caseId)!;
 const rematchMystery = { caseId: rematchCase.caseId, contentVersion: rematchCase.contentVersion, seed: "rematch-seed" };
 
 describe("multiplayer room protocol", () => {
+  it("pins the host's round limit for the whole room", () => {
+    const unlimited = createRoomRecord({
+      roomId: "forever",
+      hostUid: "host",
+      hostDisplayName: "Host",
+      maximumPlayers: 4,
+      maximumRounds: null,
+      caseId: thePainThatMovedCardCase.caseId,
+      contentVersion: thePainThatMovedCardCase.contentVersion,
+      seed: "unlimited-room",
+      now: 1_000,
+    });
+    expect(unlimited.maximumRounds).toBeNull();
+  });
+
   it("creates a private lobby and joins up to the configured capacity", () => {
     let room = created();
     room = joinRoomRecord(room, "guest", "Guest", 2_000);

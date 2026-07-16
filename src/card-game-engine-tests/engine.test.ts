@@ -81,11 +81,11 @@ function forceCard(
 }
 
 function lockAllHumans(state: MatchState): MatchState {
-  for (const playerId of state.playerOrder) {
+  while (state.phase === "card_selection") {
+    const playerId = state.currentTurnPlayerId;
+    if (!playerId) throw new Error("Expected an active card turn.");
     const player = state.players[playerId];
-    if (player?.kind !== "human" || player.correctDiagnosisRound !== null) {
-      continue;
-    }
+    if (player?.kind !== "human" || player.correctDiagnosisRound !== null) break;
     const card = player.hand.cards[0];
     if (card === undefined) {
       throw new Error("Expected a card in hand.");
@@ -113,7 +113,7 @@ function resolveAndOpenDiagnosis(state: MatchState): MatchState {
 }
 
 function advanceAndDraw(state: MatchState): MatchState {
-  if (state.currentRound >= state.maximumRounds) {
+  if (state.maximumRounds !== null && state.currentRound >= state.maximumRounds) {
     return state;
   }
   state = run(state, { type: "CONTINUE_FROM_DIAGNOSIS" });
@@ -318,6 +318,58 @@ describe("seeded match creation and decks", () => {
 });
 
 describe("round state machine", () => {
+  it("allows only one player at a time and passes the turn in seat order", () => {
+    let state = startAndDraw("sequential-turns");
+    expect(state.currentTurnPlayerId).toBe("player.one");
+
+    const earlyCard = state.players["player.two"]?.hand.cards[0];
+    if (!earlyCard) throw new Error("Missing second-player card.");
+    const early = transitionCardGame(content, state, {
+      type: "SELECT_CARD",
+      playerId: "player.two",
+      cardInstanceId: earlyCard.instanceId,
+    });
+    expect(early.errors[0]?.message).toContain("Wait for One");
+    expect(early.state).toBe(state);
+
+    const firstCard = state.players["player.one"]?.hand.cards[0];
+    if (!firstCard) throw new Error("Missing first-player card.");
+    state = run(state, { type: "SELECT_CARD", playerId: "player.one", cardInstanceId: firstCard.instanceId });
+    state = run(state, { type: "LOCK_CARD", playerId: "player.one" });
+    expect(state.currentTurnPlayerId).toBe("player.two");
+    expect(state.phase).toBe("card_selection");
+
+    state = run(state, { type: "SELECT_CARD", playerId: "player.two", cardInstanceId: earlyCard.instanceId });
+    state = run(state, { type: "LOCK_CARD", playerId: "player.two" });
+    expect(state.currentTurnPlayerId).toBeNull();
+    expect(state.phase).toBe("cards_locked");
+  });
+
+  it("rotates the first player each round", () => {
+    let state = createCardMatch(content, { seed: "rotating-first-player", players: twoHumans });
+    state = run(state, { type: "START_MATCH" });
+    state.currentRound = 2;
+    state = run(state, { type: "DRAW_CARDS" });
+    expect(state.currentTurnPlayerId).toBe("player.two");
+  });
+
+  it("continues beyond round ten when the match has no round limit", () => {
+    const state = createCardMatch(content, {
+      seed: "unlimited-rounds",
+      players: twoHumans,
+      maximumRounds: null,
+    });
+    state.phase = "diagnosis_window";
+    state.currentRound = 10;
+    state.diagnosisPassedPlayerIds = [...state.playerOrder];
+
+    const next = run(state, { type: "CONTINUE_FROM_DIAGNOSIS" });
+    expect(next.maximumRounds).toBeNull();
+    expect(next.phase).toBe("next_round");
+    const advanced = run(next, { type: "ADVANCE_ROUND" });
+    expect(advanced.currentRound).toBe(11);
+  });
+
   it("keeps selection, locking, and reveal as separate phases", () => {
     let state = startAndDraw("separate-phases");
     const beforeClues = knownClueIdsForPlayer(state, "player.one");
@@ -472,9 +524,10 @@ describe("round state machine", () => {
   it("reveals exactly one seeded shared event on its authored round", () => {
     let state = startAndDraw("event-round");
     const authoredRound = state.sharedEvent.round;
-    for (let round = 1; round <= state.maximumRounds; round += 1) {
+    const maximumRounds = state.maximumRounds ?? 10;
+    for (let round = 1; round <= maximumRounds; round += 1) {
       state = resolveAndOpenDiagnosis(state);
-      if (round < state.maximumRounds) {
+      if (round < maximumRounds) {
         state = advanceAndDraw(state);
       }
     }
@@ -488,7 +541,8 @@ describe("round state machine", () => {
   it("advances through all ten rounds into a final diagnosis window", () => {
     let state = startAndDraw("ten-rounds");
     expect(state.maximumRounds).toBe(10);
-    for (let round = 1; round <= state.maximumRounds; round += 1) {
+    const maximumRounds = state.maximumRounds ?? 10;
+    for (let round = 1; round <= maximumRounds; round += 1) {
       expect(state.currentRound).toBe(round);
       state = resolveAndOpenDiagnosis(state);
       expect(state.phase).toBe("diagnosis_window");
@@ -626,19 +680,21 @@ describe("diagnosis race", () => {
     });
     expect(state.players["player.one"]?.diagnosisAttemptsUsed).toBe(3);
     expect(state.players["player.one"]?.finalDiagnosisSubmitted).toBe(true);
-    expect(state.phase).toBe("match_complete");
-    expect(state.result?.winnerPlayerIds).toEqual(["player.two"]);
+    expect(state.phase).toBe("diagnosis_window");
+    expect(state.result).toBeNull();
   });
 
-  it("requires an available final diagnosis before the match can finish", () => {
+  it("finishes a limited match with no winner after the final round", () => {
     const state = diagnosisState();
-    state.currentRound = state.maximumRounds;
+    state.currentRound = state.maximumRounds ?? 10;
+    state.diagnosisPassedPlayerIds = [...state.playerOrder];
     const result = transitionCardGame(content, state, {
       type: "CONTINUE_FROM_DIAGNOSIS",
     });
 
-    expect(result.errors[0]?.code).toBe("DIAGNOSIS_REQUIRED");
-    expect(result.state.phase).toBe("diagnosis_window");
+    expect(result.errors).toEqual([]);
+    expect(result.state.phase).toBe("match_complete");
+    expect(result.state.result?.winnerPlayerIds).toEqual([]);
   });
 
   it("records a correct diagnosis and prevents resubmission", () => {

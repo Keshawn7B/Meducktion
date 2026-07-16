@@ -8,6 +8,7 @@ service cloud.firestore {
       return request.resource.data.schemaVersion == resource.data.schemaVersion
         && request.resource.data.roomId == resource.data.roomId
         && request.resource.data.maximumPlayers == resource.data.maximumPlayers
+        && request.resource.data.get('maximumRounds', 10) == resource.data.get('maximumRounds', 10)
         && request.resource.data.createdAt == resource.data.createdAt;
     }
     function isJoiningLobby() {
@@ -114,6 +115,7 @@ service cloud.firestore {
         && request.resource.data.hostUid == request.auth.uid
         && request.resource.data.memberUids == [request.auth.uid]
         && request.resource.data.status == 'lobby'
+        && request.resource.data.maximumRounds in [10, null]
         && request.resource.data.revision == 0;
       allow get: if isMember(resource.data) || (signedIn() && resource.data.status == 'lobby');
       allow list: if false;

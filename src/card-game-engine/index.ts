@@ -296,7 +296,8 @@ export function createCardMatch(
     rng,
     phase: "match_intro",
     currentRound: 0,
-    maximumRounds: 10,
+    maximumRounds: options.maximumRounds === undefined ? 10 : options.maximumRounds,
+    currentTurnPlayerId: null,
     playerOrder: players.map((player) => player.id),
     players: playerStates,
     publicClues: [],
@@ -533,27 +534,22 @@ function botCardValue(
   return usefulBonus + categoryValue[card.category] - irrelevantPenalty;
 }
 
-function autoLockBots(
+function selectAndLockBot(
   content: CardCaseContent,
   state: MatchState,
   events: MatchEvent[],
+  player: PlayerState,
 ): void {
-  for (const player of activePlayers(state)) {
-    if (player.kind !== "bot" || player.hand.locked) {
-      continue;
-    }
-    const values = player.hand.cards.map((instance) => ({
-      instance,
-      value: botCardValue(content, state, player, instance),
-    }));
-    const bestValue = Math.max(...values.map((candidate) => candidate.value));
-    const bestCards = values
-      .filter((candidate) => candidate.value === bestValue)
-      .map((candidate) => candidate.instance);
-    const selected = chooseSeededFromBest(state, bestCards);
-    if (selected === null) {
-      continue;
-    }
+  const values = player.hand.cards.map((instance) => ({
+    instance,
+    value: botCardValue(content, state, player, instance),
+  }));
+  const bestValue = Math.max(...values.map((candidate) => candidate.value));
+  const bestCards = values
+    .filter((candidate) => candidate.value === bestValue)
+    .map((candidate) => candidate.instance);
+  const selected = chooseSeededFromBest(state, bestCards);
+  if (selected !== null) {
     player.hand.selectedCardInstanceId = selected.instanceId;
     player.hand.locked = true;
     emit(state, events, "card_selected", [player.id], { bot: true });
@@ -561,9 +557,40 @@ function autoLockBots(
   }
 }
 
-function allActiveCardsLocked(state: MatchState): boolean {
-  const active = activePlayers(state);
-  return active.length > 0 && active.every((player) => player.hand.locked);
+function activePlayersInTurnOrder(state: MatchState): PlayerState[] {
+  const offset = state.playerOrder.length === 0
+    ? 0
+    : Math.max(0, state.currentRound - 1) % state.playerOrder.length;
+  const rotated = [
+    ...state.playerOrder.slice(offset),
+    ...state.playerOrder.slice(0, offset),
+  ];
+  return rotated
+    .map((playerId) => state.players[playerId])
+    .filter(
+      (player): player is PlayerState =>
+        player !== undefined && !player.finalDiagnosisSubmitted,
+    );
+}
+
+function advanceSelectionTurn(
+  content: CardCaseContent,
+  state: MatchState,
+  events: MatchEvent[],
+): void {
+  while (true) {
+    const next = activePlayersInTurnOrder(state).find((player) => !player.hand.locked);
+    if (!next) {
+      state.currentTurnPlayerId = null;
+      state.phase = "cards_locked";
+      emit(state, events, "all_cards_locked");
+      return;
+    }
+    state.currentTurnPlayerId = next.id;
+    if (next.kind !== "bot") return;
+    selectAndLockBot(content, state, events, next);
+    if (!next.hand.locked) return;
+  }
 }
 
 function revealClue(
@@ -928,6 +955,33 @@ function validateDiagnosis(
   return null;
 }
 
+function isFinalRound(state: MatchState): boolean {
+  return state.maximumRounds !== null && state.currentRound >= state.maximumRounds;
+}
+
+function currentTurnPlayer(state: MatchState): PlayerState | undefined {
+  const explicit = state.currentTurnPlayerId === null
+    ? undefined
+    : state.players[state.currentTurnPlayerId];
+  if (explicit && !explicit.finalDiagnosisSubmitted && !explicit.hand.locked) {
+    return explicit;
+  }
+  return activePlayersInTurnOrder(state).find((player) => !player.hand.locked);
+}
+
+function requirePlayerTurn(state: MatchState, player: PlayerState): CardGameError | null {
+  const current = currentTurnPlayer(state);
+  return current?.id === player.id
+    ? null
+    : {
+        code: "INVALID_COMMAND",
+        message: current
+          ? `Wait for ${current.displayName} to finish their turn.`
+          : "There is no active card turn.",
+        relatedId: player.id,
+      };
+}
+
 function hideCluePile(
   state: MatchState,
   events: MatchEvent[],
@@ -1029,7 +1083,7 @@ function botDiagnosisCandidate(
     return null;
   }
   const leaders = scored.filter((candidate) => candidate.score === bestScore);
-  if (leaders.length > 1 && state.currentRound < state.maximumRounds) {
+  if (leaders.length > 1 && !isFinalRound(state)) {
     return null;
   }
   const evidenceLeader = chooseSeededFromBest(state, leaders);
@@ -1201,7 +1255,9 @@ export function transitionCardGame(
     }
     state.acknowledgedRevealPlayerIds = [];
     state.phase = "card_selection";
+    state.currentTurnPlayerId = null;
     emit(state, events, "cards_dealt", [], { handSize: 3 });
+    advanceSelectionTurn(content, state, events);
     return complete(original, state, events);
   }
 
@@ -1216,6 +1272,8 @@ export function transitionCardGame(
     if (player.correctDiagnosisRound !== null) {
       return fail(original, "INVALID_COMMAND", "This player has finished diagnosing.");
     }
+    const turnError = requirePlayerTurn(state, player);
+    if (turnError !== null) return { state: original, events: [], errors: [turnError] };
     if (player.hand.locked) {
       return fail(original, "CARD_ALREADY_LOCKED", "The card is already locked.");
     }
@@ -1244,6 +1302,8 @@ export function transitionCardGame(
     if (player === undefined) {
       return fail(original, "UNKNOWN_PLAYER", "Unknown player.", command.playerId);
     }
+    const turnError = requirePlayerTurn(state, player);
+    if (turnError !== null) return { state: original, events: [], errors: [turnError] };
     if (player.hand.locked) {
       return fail(original, "CARD_ALREADY_LOCKED", "The card is already locked.");
     }
@@ -1263,6 +1323,8 @@ export function transitionCardGame(
     if (player === undefined) {
       return fail(original, "UNKNOWN_PLAYER", "Unknown player.", command.playerId);
     }
+    const turnError = requirePlayerTurn(state, player);
+    if (turnError !== null) return { state: original, events: [], errors: [turnError] };
     if (player.hand.locked) {
       return fail(original, "CARD_ALREADY_LOCKED", "The card is already locked.");
     }
@@ -1286,6 +1348,8 @@ export function transitionCardGame(
     if (player === undefined) {
       return fail(original, "UNKNOWN_PLAYER", "Unknown player.", command.playerId);
     }
+    const turnError = requirePlayerTurn(state, player);
+    if (turnError !== null) return { state: original, events: [], errors: [turnError] };
     if (player.hand.locked) {
       return fail(original, "CARD_ALREADY_LOCKED", "The card is already locked.");
     }
@@ -1294,17 +1358,13 @@ export function transitionCardGame(
     }
     player.hand.locked = true;
     emit(state, events, "card_locked", [player.id], { bot: false });
-    autoLockBots(content, state, events);
-    if (allActiveCardsLocked(state)) {
-      state.phase = "cards_locked";
-      emit(state, events, "all_cards_locked");
-    }
+    advanceSelectionTurn(content, state, events);
     return complete(original, state, events);
   }
 
   if (command.type === "UNLOCK_CARD") {
-    if (state.phase !== "card_selection") {
-      return fail(original, "INVALID_PHASE", "Cards can only be unlocked while players are still choosing.");
+    if (state.phase !== "card_selection" && state.phase !== "cards_locked") {
+      return fail(original, "INVALID_PHASE", "Cards can only be unlocked before the reveal.");
     }
     const player = state.players[command.playerId];
     if (player === undefined) {
@@ -1313,7 +1373,21 @@ export function transitionCardGame(
     if (!player.hand.locked) {
       return fail(original, "INVALID_COMMAND", "This card is not locked.");
     }
+    const current = currentTurnPlayer(state);
+    const turnOrder = activePlayersInTurnOrder(state);
+    const currentIndex = current
+      ? turnOrder.findIndex((candidate) => candidate.id === current.id)
+      : turnOrder.length;
+    const previous = turnOrder[currentIndex - 1];
+    if (previous?.id !== player.id) {
+      return fail(original, "INVALID_COMMAND", "Only the most recent player may take back a locked card.");
+    }
+    if (current?.hand.selectedCardInstanceId) {
+      return fail(original, "INVALID_COMMAND", "The next player has already started their turn.");
+    }
     player.hand.locked = false;
+    state.currentTurnPlayerId = player.id;
+    state.phase = "card_selection";
     emit(state, events, "card_unlocked", [player.id]);
     return complete(original, state, events);
   }
@@ -1376,6 +1450,7 @@ export function transitionCardGame(
         state.players[playerId]?.finalDiagnosisSubmitted === true,
     );
     state.phase = "card_reveal";
+    state.currentTurnPlayerId = null;
     return complete(original, state, events);
   }
 
@@ -1439,11 +1514,7 @@ export function transitionCardGame(
     resolveBotCluePenalty(state, events, player);
 
     if (state.phase === "card_selection" && player.correctDiagnosisRound === null) {
-      autoLockBots(content, state, events);
-      if (allActiveCardsLocked(state)) {
-        state.phase = "cards_locked";
-        emit(state, events, "all_cards_locked");
-      }
+      advanceSelectionTurn(content, state, events);
     } else if (state.phase === "card_reveal") {
       if (!state.acknowledgedRevealPlayerIds.includes(command.playerId)) {
         state.acknowledgedRevealPlayerIds.push(command.playerId);
@@ -1485,18 +1556,6 @@ export function transitionCardGame(
     ) {
       return fail(original, "INVALID_COMMAND", "This player already made a round decision.");
     }
-    if (
-      state.currentRound >= state.maximumRounds &&
-      player.correctDiagnosisRound === null &&
-      player.diagnosisAttemptsUsed < 3
-    ) {
-      return fail(
-        original,
-        "DIAGNOSIS_REQUIRED",
-        "A final diagnosis is required while an attempt remains.",
-        command.playerId,
-      );
-    }
     state.diagnosisPassedPlayerIds = [...passed, command.playerId];
     emit(state, events, "diagnosis_passed", [command.playerId]);
     return complete(original, state, events);
@@ -1525,18 +1584,15 @@ export function transitionCardGame(
       finishMatch(content, state, events, player.id);
       return complete(original, state, events);
     }
+    if (state.phase === "card_selection" && player.finalDiagnosisSubmitted) {
+      advanceSelectionTurn(content, state, events);
+    }
     if (player.kind === "human") {
       autoDiagnoseBots(content, state, events);
     }
     const winnerPlayerId = firstCorrectPlayerId(state);
     if (winnerPlayerId !== null) {
       finishMatch(content, state, events, winnerPlayerId);
-      return complete(original, state, events);
-    }
-    const remainingPlayers = activePlayers(state);
-    if (remainingPlayers.length === 1 && state.playerOrder.length > 1) {
-      finishMatch(content, state, events, remainingPlayers[0]!.id);
-      if (state.result) state.result.winningTieBreak = "only_player";
       return complete(original, state, events);
     }
     if (state.playerOrder.every((id) => state.players[id]?.finalDiagnosisSubmitted)) {
@@ -1549,42 +1605,14 @@ export function transitionCardGame(
     if (state.phase !== "diagnosis_window") {
       return fail(original, "INVALID_PHASE", "The diagnosis window is not open.");
     }
-    const requiredFinalDiagnosis =
-      state.currentRound >= state.maximumRounds
-        ? state.playerOrder
-            .map((id) => state.players[id])
-            .find(
-              (player) =>
-                player?.kind === "human" &&
-                player.correctDiagnosisRound === null &&
-                player.diagnosisAttemptsUsed < 3 &&
-                !player.diagnosisSubmissions.some(
-                  (submission) => submission.round === state.currentRound,
-                ),
-            )
-        : undefined;
-    if (requiredFinalDiagnosis) {
-      return fail(
-        original,
-        "DIAGNOSIS_REQUIRED",
-        "A final diagnosis is required while an attempt remains.",
-        requiredFinalDiagnosis.id,
-      );
-    }
     autoDiagnoseBots(content, state, events);
     const winnerPlayerId = firstCorrectPlayerId(state);
     if (winnerPlayerId !== null) {
       finishMatch(content, state, events, winnerPlayerId);
       return complete(original, state, events);
     }
-    const remainingPlayers = activePlayers(state);
-    if (remainingPlayers.length === 1 && state.playerOrder.length > 1) {
-      finishMatch(content, state, events, remainingPlayers[0]!.id);
-      if (state.result) state.result.winningTieBreak = "only_player";
-      return complete(original, state, events);
-    }
     if (
-      state.currentRound >= state.maximumRounds ||
+      isFinalRound(state) ||
       state.playerOrder.every((id) => state.players[id]?.finalDiagnosisSubmitted)
     ) {
       finishMatch(content, state, events);
@@ -1610,7 +1638,7 @@ export function transitionCardGame(
   if (command.type === "COMPLETE_MATCH") {
     if (
       state.phase !== "diagnosis_window" ||
-      (state.currentRound < state.maximumRounds &&
+      (!isFinalRound(state) &&
         !state.playerOrder.every((id) => state.players[id]?.finalDiagnosisSubmitted))
     ) {
       return fail(original, "INVALID_PHASE", "The match cannot be completed yet.");
@@ -1676,6 +1704,7 @@ export function getPlayerMatchView(
     phase: state.phase,
     currentRound: state.currentRound,
     maximumRounds: state.maximumRounds,
+    currentTurnPlayerId: currentTurnPlayer(state)?.id ?? null,
     publicClues: structuredClone(state.publicClues),
     sharedEvent: structuredClone(state.sharedEvent),
     latestPlays: structuredClone(state.latestPlays),

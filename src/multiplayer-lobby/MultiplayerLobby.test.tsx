@@ -25,6 +25,7 @@ function entryModel(): MultiplayerLobbyModel {
     busy: false,
     operation: null,
     maximumPlayers: 4,
+    maximumRounds: 10,
     isHost: false,
     currentPlayerReady: false,
     canStart: false,
@@ -44,8 +45,9 @@ describe("multiplayer lobby UI", () => {
     await user.clear(name);
     await user.type(name, "Keshawn");
     await user.selectOptions(screen.getByLabelText("Seats"), "3");
+    await user.selectOptions(screen.getByLabelText("Match length"), "unlimited");
     await user.click(screen.getByRole("button", { name: "Create Room" }));
-    expect(calls.createRoom).toHaveBeenCalledWith("Keshawn", 3);
+    expect(calls.createRoom).toHaveBeenCalledWith("Keshawn", 3, null);
     expect(localStorage.getItem(MULTIPLAYER_NAME_STORAGE_KEY)).toBe("Keshawn");
 
     await user.type(screen.getByLabelText("Room code"), "abc234");
@@ -75,6 +77,7 @@ describe("multiplayer lobby UI", () => {
       operation: null,
       roomCode: "ABC234",
       maximumPlayers: 3,
+      maximumRounds: null,
       isHost: true,
       currentPlayerReady: true,
       canStart: true,

@@ -48,7 +48,7 @@ export interface OpponentView {
   readonly displayName: string;
   readonly styleLabel: string;
   readonly avatar?: string;
-  readonly status: "choosing" | "locked" | "reviewing" | "diagnosed" | "eliminated" | "reconnecting";
+  readonly status: "choosing" | "waiting" | "locked" | "reviewing" | "diagnosed" | "eliminated" | "reconnecting";
   readonly playedCategory?: CardCategory;
 }
 
@@ -112,7 +112,9 @@ export interface CardAppModel {
   readonly conditions: readonly ConditionView[];
   readonly match: {
     readonly round: number;
-    readonly maximumRounds: number;
+    readonly maximumRounds: number | null;
+    readonly currentTurnName: string;
+    readonly isYourTurn: boolean;
     readonly phase: CardMatchPhase;
     readonly seedLabel: string;
     readonly hand: readonly CardView[];
@@ -132,7 +134,6 @@ export interface CardAppModel {
     readonly diagnosisBlockedUntilNextRound: boolean;
     readonly humanHasDiagnosed: boolean;
     readonly humanEliminated: boolean;
-    readonly mustDiagnose: boolean;
     readonly canLock: boolean;
     readonly canUnlock: boolean;
     readonly canReveal: boolean;

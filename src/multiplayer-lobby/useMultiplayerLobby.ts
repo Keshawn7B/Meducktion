@@ -186,7 +186,7 @@ export function useMultiplayerLobby(onExit?: () => void): MultiplayerLobbyContro
   }
 
   const actions = useMemo<MultiplayerLobbyActions>(() => ({
-    createRoom: async (displayName, maximumPlayers) => run("create", async () => {
+    createRoom: async (displayName, maximumPlayers, maximumRounds) => run("create", async () => {
       const user = await ensureAnonymousPlayer();
       const roomCode = generateRoomCode();
       const seed = `room-${roomCode}-${Date.now().toString(36)}-${generateRoomCode()}`;
@@ -196,6 +196,7 @@ export function useMultiplayerLobby(onExit?: () => void): MultiplayerLobbyContro
         hostUid: user.uid,
         hostDisplayName: displayName,
         maximumPlayers,
+        maximumRounds,
         caseId: selectedCase.caseId,
         contentVersion: selectedCase.contentVersion,
         seed,
@@ -239,6 +240,7 @@ export function useMultiplayerLobby(onExit?: () => void): MultiplayerLobbyContro
       const match = createCardMatch(roomContent, {
         seed: room.seed,
         matchId: `match.online.${room.roomId}`,
+        maximumRounds: room.maximumRounds,
         players: room.memberUids.map((memberUid) => ({
           id: memberUid,
           displayName: room.members[memberUid]?.displayName ?? "Player",
@@ -360,7 +362,6 @@ export function useMultiplayerLobby(onExit?: () => void): MultiplayerLobbyContro
     const shouldAcknowledge = state.phase === "card_reveal" && !state.acknowledgedRevealPlayerIds.includes(uid);
     const shouldOpen = state.phase === "clue_review";
     const shouldPass = state.phase === "diagnosis_window"
-      && state.currentRound < state.maximumRounds
       && player !== undefined
       && !player.finalDiagnosisSubmitted
       && !player.diagnosisSubmissions.some((submission) => submission.round === state.currentRound)
@@ -375,7 +376,7 @@ export function useMultiplayerLobby(onExit?: () => void): MultiplayerLobbyContro
       if (next.session?.matchState.phase === "clue_review") {
         next = await sendCommand(next, { type: "OPEN_DIAGNOSIS_WINDOW" });
       }
-      if (next.session?.matchState.phase === "diagnosis_window" && next.session.matchState.currentRound < next.session.matchState.maximumRounds) {
+      if (next.session?.matchState.phase === "diagnosis_window") {
         const current = next.session.matchState.players[uid];
         const decided = current?.finalDiagnosisSubmitted
           || current?.diagnosisSubmissions.some((submission) => submission.round === next.session!.matchState.currentRound)
@@ -561,6 +562,7 @@ export function useMultiplayerLobby(onExit?: () => void): MultiplayerLobbyContro
       ...(room ? { roomCode: room.roomId } : {}),
       ...(room ? { caseTitle: room.status === "lobby" ? "Random mystery" : "Current mystery" } : {}),
       maximumPlayers: room?.maximumPlayers ?? 4,
+      maximumRounds: room?.maximumRounds === undefined ? 10 : room.maximumRounds,
       isHost,
       currentPlayerReady: room?.members[uid]?.ready ?? false,
       canStart: isHost && room?.status === "lobby" && allReady,

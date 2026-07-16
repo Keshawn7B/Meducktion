@@ -341,7 +341,7 @@ function PatientIntro({
       />
       <section className="intro-stage">
         <div className="intro-portrait-wrap">
-          <p className="round-ribbon">Fictional case &middot; 10 rounds</p>
+          <p className="round-ribbon">Fictional case</p>
           <PatientPortrait large />
         </div>
         <div className="intro-story">
@@ -397,16 +397,6 @@ function MatchScreen({
     : match.diagnosisUnlocked
       ? "Diagnose"
       : "Diagnose after reveal";
-  const roundDecisionMessage = match.mustDiagnose
-    ? "This is the final round. Choose a condition before finishing."
-    : match.humanHasDiagnosed
-    ? "Your diagnosis is locked in. Continue to see how the room finishes."
-    : match.diagnosisBlockedUntilNextRound
-      ? "Your next diagnosis attempt unlocks next round. Keep investigating."
-      : match.diagnosisUnlocked
-        ? "Call the case whenever you are confident. The first correct diagnosis wins."
-        : "Finish this reveal, then continue investigating or diagnose.";
-
   return (
     <>
       <header className="match-header">
@@ -457,7 +447,7 @@ function MatchScreen({
                   <small>{opponent.styleLabel} opponent</small>
                 </div>
                 <span className={`status-pill status-${opponent.status}`}>
-                  {opponent.status === "locked" ? "Locked" : opponent.status === "diagnosed" ? "Diagnosed" : opponent.status === "eliminated" ? "Out" : opponent.status === "reconnecting" ? "Reconnecting" : opponent.status === "reviewing" ? "Waiting" : "Choosing"}
+                  {opponent.status === "locked" ? "Turn complete" : opponent.status === "diagnosed" ? "Diagnosed" : opponent.status === "eliminated" ? "Out" : opponent.status === "reconnecting" ? "Reconnecting" : opponent.status === "reviewing" || opponent.status === "waiting" ? "Waiting" : "Playing"}
                 </span>
                 <div className="opponent-card-backs" aria-label="Three face-down opponent cards">
                   {[0, 1, 2].map((index) => (
@@ -480,9 +470,6 @@ function MatchScreen({
             </section>
 
             <article id="patient-card" className="patient-table-center" aria-labelledby="patient-table-name">
-              <div className="patient-round-pips" aria-label={`Round ${match.round} of ${match.maximumRounds}`}>
-                {Array.from({ length: match.maximumRounds }, (_, index) => <span key={index} className={index < match.round ? "is-current" : ""}>{index + 1}</span>)}
-              </div>
               <PatientPortrait large />
               <p className="playful-kicker">Patient</p>
               <h1 id="patient-table-name">{model.patient.displayName} <small>Age {model.patient.age}</small></h1>
@@ -541,12 +528,13 @@ function MatchScreen({
             <div>
               <p className="playful-kicker">Round {match.round}</p>
               <h2 id="hand-title">Your hand</h2>
+              <strong className="turn-owner">{match.isYourTurn ? "Your turn" : `${match.currentTurnName}'s turn`}</strong>
               <p>{match.statusMessage}</p>
             </div>
             <div className="hand-tools">
               <button
                 className="button button-small"
-                disabled={!match.redrawAvailable || match.phase !== "card_selection" || onlineBlocked}
+                disabled={!match.redrawAvailable || match.phase !== "card_selection" || !match.isYourTurn || onlineBlocked}
                 onClick={actions.useRedraw}
               >
                 Redraw hand
@@ -601,26 +589,6 @@ function MatchScreen({
               </button>
             )}
           </div>}
-          {match.mustDiagnose && (
-            <section className="round-decision" aria-labelledby="round-decision-title">
-              <div>
-                <p className="playful-kicker">Your decision</p>
-                <h3 id="round-decision-title">Review the clues</h3>
-                <p>{roundDecisionMessage}</p>
-              </div>
-              <div className="round-decision-actions">
-                {match.diagnosisUnlocked && !match.humanHasDiagnosed && (
-                  <button
-                    className="button button-diagnose button-large"
-                    disabled={onlineBlocked}
-                    onClick={() => setDiagnosisOpen(true)}
-                  >
-                    Diagnose now
-                  </button>
-                )}
-              </div>
-            </section>
-          )}
         </section>
       </main>
       <p className="visually-hidden" aria-live="polite">
@@ -771,7 +739,9 @@ function ResultsScreen({ model, actions }: ScreenProps) {
   }
   const human = results.rankings.find((player) => player.isHuman);
   const humanOutcome = human
-    ? human.placement === 1
+    ? !results.winnerName
+      ? "No player diagnosed the case correctly."
+      : human.placement === 1
       ? "You solved the case first."
       : "Another player solved the case first."
     : "";
@@ -787,13 +757,13 @@ function ResultsScreen({ model, actions }: ScreenProps) {
       </div>
       <section className="winner-hero" aria-labelledby="winner-title">
         <p className="playful-kicker">Match complete</p>
-        <h1 id="winner-title">{results.winnerName ? `${results.winnerName} wins!` : "Case closed"}</h1>
+        <h1 id="winner-title">{results.winnerName ? `${results.winnerName} wins!` : "No winner"}</h1>
         <p>
           The correct condition was <strong>{results.hiddenDiagnosisName}</strong>.
         </p>
         {human && (
           <div className="human-result-summary">
-            <p className={human.placement === 1 ? "human-outcome winner-outcome" : "human-outcome"}>
+            <p className={results.winnerName && human.placement === 1 ? "human-outcome winner-outcome" : "human-outcome"}>
               <strong>{humanOutcome}</strong>
               <span>
                 {human.diagnosisCorrect
@@ -813,7 +783,7 @@ function ResultsScreen({ model, actions }: ScreenProps) {
         </div>
         <div className="rank-list">
           {results.rankings.map((player) => (
-            <article className={`rank-card${player.placement === 1 ? " rank-winner" : ""}`} key={player.playerId}>
+            <article className={`rank-card${results.winnerName && player.placement === 1 ? " rank-winner" : ""}`} key={player.playerId}>
               <span className="placement" aria-label={`Place ${player.placement}`}>
                 {player.placement}
               </span>
@@ -823,7 +793,7 @@ function ResultsScreen({ model, actions }: ScreenProps) {
                   {player.diagnosisName} &middot; {player.diagnosisCorrect ? "Correct" : "Not solved"}
                 </span>
               </div>
-              {player.placement === 1 && <strong className="rank-total">Winner</strong>}
+              {results.winnerName && player.placement === 1 && <strong className="rank-total">Winner</strong>}
             </article>
           ))}
         </div>
@@ -1050,7 +1020,16 @@ function CluePilePenaltyPanel({
   );
 }
 
-function RoundTracker({ round, maximum }: { round: number; maximum: number }) {
+function RoundTracker({ round, maximum }: { round: number; maximum: number | null }) {
+  if (maximum === null) {
+    return (
+      <div className="round-tracker round-tracker-unlimited" aria-label={`Round ${round}, unlimited match`}>
+        <span>Round</span>
+        <strong>{round}</strong>
+        <small>Unlimited</small>
+      </div>
+    );
+  }
   return (
     <div className="round-tracker" aria-label={`Round ${round} of ${maximum}`}>
       <span>Round</span>

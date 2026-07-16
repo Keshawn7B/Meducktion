@@ -22,7 +22,7 @@ This section is the authoritative description of the currently mounted game. Old
 
 The default mode is the shared-patient competitive card game. Two to four players investigate the same fictional case, choose one of three question cards, and reveal authored answers into their own private YES and NO evidence piles. Local play uses one deterministic bot; private online rooms use the same engine and session contract for human players.
 
-Locking remains reversible while another player is still choosing. When the final active player locks, the round reveals automatically, places each answer into its owner's private pile, and prepares the next hand. There is no separate Reveal, Review Clues, or Keep Investigating gate. A player may diagnose from Round 1 while choosing a card. The final round still requires a diagnosis when an attempt remains.
+Players take card turns in seat order, and the starting seat rotates each round so the same player does not always act first. Only the active player may choose, redraw, or lock; locking passes play to the next active seat. Locking remains reversible until the next player begins choosing. When the final active player locks, the round reveals automatically, places each answer into its owner's private pile, and prepares the next hand. There is no separate Reveal, Review Clues, or Keep Investigating gate. A player may diagnose from Round 1. A limited match ends without a winner if Round 10 finishes without a correct diagnosis; an unlimited match continues until someone wins or all players are eliminated.
 
 Question cards use short, generic symptom and homeostasis checks such as `Fever?`, `Nausea?`, `Urine clear?`, `Blood sugar normal?`, and `Cough?`. Their case-specific YES or NO answer is fixed case content, never random medical truth. Ask, Check, and Test are presentation types only; the active decks contain no Special cards and no cards that directly reveal the diagnosis.
 
@@ -94,8 +94,8 @@ It should not feel like a medical-school examination, hospital simulator, electr
 ## The one-minute rules
 
 1. Every player investigates the same fictional patient and receives three cards.
-2. Choose one Ask, Check, or Test question, then lock it.
-3. After everyone locks, reveal the cards and privately sort each answer into YES or NO.
+2. On your turn, choose one Ask, Check, or Test question, then lock it to pass play clockwise.
+3. After every active player has taken one turn, reveal the cards and privately sort each answer into YES or NO.
 4. Diagnose whenever you are ready by choosing one of eight conditions.
 5. The first miss hides one chosen evidence pile; the second hides both; the third eliminates you.
 6. The first correct diagnosis wins immediately.
@@ -114,7 +114,7 @@ Meet the patient
 → first correct diagnosis wins
 ```
 
-Current defaults are 2–4 player-compatible rules, one human versus one Balanced bot for local testing, ten rounds, a three-card hand, one card per player per round, diagnosis from Round 1, no strict timer, and no more than three diagnosis attempts.
+Current defaults are 2–4 player-compatible rules, one human versus one Balanced bot for local testing, a three-card hand, one card per player per round, diagnosis from Round 1, no strict timer, and no more than three diagnosis attempts. Online room hosts choose either a ten-round limit or unlimited rounds.
 
 ## Card categories
 
@@ -132,7 +132,7 @@ Every opening hand contains at least one Ask, one Check, and one Test card. Each
 
 ## Public and private information
 
-Everyone sees the patient introduction, eight possible conditions, round, table event, opponents' played card categories, and whether an opponent diagnosed. A player alone sees their hand, private YES/NO piles, diagnosis choices, submission, and unused redraw. The active cases produce no shared clues. Opponent answers and investigation paths remain hidden until the recap.
+Everyone sees the patient introduction, eight possible conditions, round status in the match header, whose turn it is, table event, opponents' played card categories, and whether an opponent diagnosed. The patient card itself does not display round progress. A player alone sees their hand, private YES/NO piles, diagnosis choices, submission, and unused redraw. The active cases produce no shared clues. Opponent answers and investigation paths remain hidden until the recap.
 
 Cards may explicitly share a clue. The MVP does not allow unrestricted player-written clues, free-form medical reasoning, or bluffing about authored clue text.
 
@@ -164,7 +164,7 @@ match_intro
 → match_complete
 ```
 
-Selection may change before locking and never reveals an answer. All active players must lock before resolution. Reveal places a private YES or NO answer for each played question and draws active hands back to three. A player eliminated by a third wrong diagnosis no longer participates in card rounds.
+Selection may change before locking and never reveals an answer. Card selection proceeds through `playerOrder`, with off-turn card commands rejected. After every active player has locked once, reveal places a private YES or NO answer for each played question and draws active hands back to three. A player eliminated by a third wrong diagnosis no longer participates in card rounds.
 
 The match ends immediately when the first correct diagnosis command is accepted. If nobody solves it by the final required calls, the case ends without a winner. Completion reveals the authored answer, investigation paths, winner feedback, and a beginner-friendly educational explanation. Every diagnosis now has its own concise definition and list of common symptoms; a separate note makes clear that symptoms vary and that the game is not a diagnostic tool.
 
@@ -216,7 +216,7 @@ The transport, lobby, and live-match slice is present under `src/firebase`, `src
 
 The host creates one deterministic all-human engine session from the room's pinned case, content version, seed, and member order. Every card selection, redraw, lock, reveal acknowledgement, diagnosis, and round transition travels through the existing command envelope and Firestore transaction boundary. The repository normalizes sequence and revision values against the latest snapshot, preventing concurrent clients from accidentally overwriting a newer transition while command IDs retain idempotency. React builds the table from the authenticated player's ID and never renders another player's hand, private clue text, or diagnosis choice.
 
-Round progression is multiplayer-aware. Every active player must lock before reveal, acknowledge the reveal before diagnosis opens, and either diagnose or explicitly keep investigating before the room advances. Round 10 still requires a diagnosis while an attempt remains. The room code is retained locally so a refresh can restore the subscription after Firebase restores the anonymous identity. If a lobby host leaves, ownership transfers deterministically to the next seated player. If someone explicitly leaves an active match, their engine seat becomes a Balanced bot and completes any pending lock, reveal acknowledgement, or diagnosis decision so the room cannot be stranded.
+Round progression is multiplayer-aware. Every active player takes one card turn in seat order, all players acknowledge the reveal before diagnosis opens, and each player either diagnoses or explicitly keeps investigating before the room advances. In ten-round rooms, the match completes with no winner after the Round 10 decisions when nobody diagnosed correctly. Unlimited rooms advance beyond Round 10. The room code is retained locally so a refresh can restore the subscription after Firebase restores the anonymous identity. If a lobby host leaves, ownership transfers deterministically to the next seated player. If someone explicitly leaves an active match, their engine seat becomes a Balanced bot and completes any pending turn, reveal acknowledgement, or diagnosis decision so the room cannot be stranded.
 
 Firebase networking remains outside the engine. The engine knows nothing about Firebase, browser clocks, presence, authentication, transport retries, or server timestamps. The room adapter transmits validated commands and versioned snapshots and enforces expected revisions and command idempotency. It must not resolve cards, inspect private clues for unrelated players, choose bot actions, recalculate scores, or alter authored medical truth.
 
@@ -256,9 +256,9 @@ No new game rules, cards, modes, medical systems, or gameplay randomness were ad
 
 The first safe v2 rules slice addresses fairness and match completion without replacing the current card loop:
 
-- Cards resolve as a simultaneous round. Each player receives their own private copy of the authored YES/NO answer, even when opponents chose the same question.
+- Players choose cards sequentially in seat order; after everyone has taken a turn, the locked cards resolve together. Each player receives their own private copy of the authored YES/NO answer, even when opponents chose the same question.
 - Using the second diagnosis attempt no longer removes a player from card play. They continue investigating for discovery points.
-- An eligible player cannot skip the Round 10 final diagnosis. The interface directs them to make their call before completion.
+- A ten-round match ends with no winner if Round 10 finishes without a correct diagnosis. Unlimited rooms continue until a player wins or all players are eliminated.
 - First place is always unique. The engine records the actual ranking criterion, and the results screen explains it.
 
 Remaining v2 work is deliberately staged rather than folded into this narrow engine migration. A variable hidden diagnosis requires a fully authored and medically reviewed clue matrix for every possible outcome. Player-controlled keep/swap decisions, choice-driven event cards, weighted evidence, revised positive scoring, public Test cards, generic Tactics, bot strategy changes, and result-aware bad-luck protection remain unimplemented. Those changes affect content contracts, balance, tutorial copy, and saved-state compatibility and should be developed as a separately versioned slice with dedicated playtesting.

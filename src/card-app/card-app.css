@@ -1426,7 +1426,11 @@
 }
 
 .hand-heading h2 { margin-bottom: 0.15rem; }
+.turn-owner { display: inline-block; margin: 0.2rem 0; color: var(--md-yellow); font-size: 0.9rem; }
 .hand-heading p:last-child { margin: 0; color: var(--md-muted); font-size: 0.82rem; }
+
+.round-tracker-unlimited strong { font-size: 1.35rem; color: var(--md-yellow); }
+.round-tracker-unlimited small { font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
 
 .hand-tools {
   display: flex;
