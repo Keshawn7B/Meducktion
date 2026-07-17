@@ -277,6 +277,22 @@ describe("competitive card-game UI", () => {
     expect(screen.getByLabelText("Meducktion card table")).toBeInTheDocument();
   });
 
+  it("opens condition details without placing descriptions on the condition cards", async () => {
+    const user = userEvent.setup();
+    render(<CardApp model={model("match")} actions={actions()} />);
+
+    const appendicitisCard = screen.getByRole("button", { name: "Learn about Appendicitis" });
+    expect(appendicitisCard).not.toHaveTextContent("Irritation of the appendix.");
+
+    await user.click(appendicitisCard);
+    const dialog = screen.getByRole("dialog", { name: "Appendicitis" });
+    expect(dialog).toHaveTextContent("Irritation of the appendix.");
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "Appendicitis" })).not.toBeInTheDocument();
+    expect(appendicitisCard).toHaveFocus();
+  });
+
   it("shows the active seat and disables card actions while waiting", () => {
     render(<CardApp model={model("match", {
       currentTurnName: "Bailey",
@@ -400,7 +416,7 @@ describe("competitive card-game UI", () => {
     await user.click(screen.getByRole("button", { name: "Confirm Diagnosis" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Choose one condition");
 
-    await user.click(screen.getByLabelText(/Appendicitis/));
+    await user.click(screen.getByRole("radio", { name: /Appendicitis/ }));
     await user.click(screen.getByRole("button", { name: "Confirm Diagnosis" }));
     expect(calls.submitDiagnosis).toHaveBeenCalledWith({
       conditionId: "condition.appendicitis",

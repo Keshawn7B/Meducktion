@@ -915,26 +915,93 @@ function PatientPortrait({ large = false }: { large?: boolean }) {
 }
 
 function ConditionGrid({ conditions, compact = false }: { conditions: CardAppModel["conditions"]; compact?: boolean }) {
+  const [selectedCondition, setSelectedCondition] = useState<CardAppModel["conditions"][number] | null>(null);
+  const dialogTitleRef = useRef<HTMLHeadingElement>(null);
+  const openerRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (!selectedCondition) return;
+
+    dialogTitleRef.current?.focus();
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeDetails();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [selectedCondition]);
+
+  function openDetails(
+    condition: CardAppModel["conditions"][number],
+    opener: HTMLButtonElement,
+  ) {
+    openerRef.current = opener;
+    setSelectedCondition(condition);
+  }
+
+  function closeDetails() {
+    setSelectedCondition(null);
+    window.setTimeout(() => openerRef.current?.focus(), 0);
+  }
+
   return (
-    <div
-      className={`condition-grid${compact ? " condition-grid-compact" : ""}`}
-      aria-label={`${conditions.length} possible conditions`}
-    >
-      {conditions.map((condition, index) => (
-        <article className="condition-tile" key={condition.id}>
-          <span className="condition-number" aria-hidden="true">{index + 1}</span>
-          <span className="condition-icon" aria-hidden="true">{condition.icon ?? "?"}</span>
-          <strong>{condition.displayName}</strong>
-          {compact && condition.learnMore && <p className="condition-description">{condition.learnMore}</p>}
-          {!compact && condition.learnMore && (
-            <details>
-              <summary>Learn more</summary>
-              <p>{condition.learnMore}</p>
-            </details>
-          )}
-        </article>
-      ))}
-    </div>
+    <>
+      <div
+        className={`condition-grid${compact ? " condition-grid-compact" : ""}`}
+        aria-label={`${conditions.length} possible conditions`}
+      >
+        {conditions.map((condition, index) => (
+          <button
+            className="condition-tile"
+            type="button"
+            key={condition.id}
+            aria-label={`Learn about ${condition.displayName}`}
+            onClick={(event) => openDetails(condition, event.currentTarget)}
+          >
+            <span className="condition-number" aria-hidden="true">{index + 1}</span>
+            <span className="condition-icon" aria-hidden="true">{condition.icon ?? "?"}</span>
+            <strong>{condition.displayName}</strong>
+            <span className="condition-more">View details</span>
+          </button>
+        ))}
+      </div>
+      {selectedCondition && (
+        <div
+          className="modal-backdrop condition-detail-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeDetails();
+          }}
+        >
+          <section
+            className="condition-detail-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="condition-detail-title"
+          >
+            <button
+              className="modal-close"
+              type="button"
+              onClick={closeDetails}
+              aria-label="Close condition details"
+            >
+              &times;
+            </button>
+            <span className="condition-detail-icon" aria-hidden="true">
+              {selectedCondition.icon ?? "?"}
+            </span>
+            <p className="playful-kicker">Possible condition</p>
+            <h2 id="condition-detail-title" ref={dialogTitleRef} tabIndex={-1}>
+              {selectedCondition.displayName}
+            </h2>
+            <p className="condition-detail-description">
+              {selectedCondition.learnMore ?? "No additional details are available for this condition."}
+            </p>
+            <button className="button button-primary" type="button" onClick={closeDetails}>
+              Back to the case
+            </button>
+          </section>
+        </div>
+      )}
+    </>
   );
 }
 

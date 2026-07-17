@@ -928,7 +928,11 @@
   padding: 1.15rem;
   border: 2px solid #dce7e9;
   border-radius: 1.25rem;
+  color: var(--md-text);
   background: #fff;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
   transition: transform 160ms ease, border-color 160ms ease;
 }
 
@@ -939,6 +943,12 @@
 .condition-tile:hover {
   border-color: var(--md-primary);
   transform: translateY(-3px);
+}
+
+.condition-tile:focus-visible {
+  border-color: var(--md-primary-dark);
+  outline: 3px solid var(--md-primary);
+  outline-offset: 3px;
 }
 
 .condition-tile > strong {
@@ -967,14 +977,58 @@
   font-size: 1.25rem;
 }
 
-.condition-tile details {
-  margin-top: 0.75rem;
+.condition-more {
+  display: block;
+  margin-top: 0.55rem;
   color: var(--md-muted);
-  font-size: 0.82rem;
+  font-size: 0.72rem;
+  font-weight: 800;
 }
 
-.condition-tile summary { cursor: pointer; font-weight: 800; }
-.condition-tile details p { margin: 0.45rem 0 0; }
+.condition-detail-backdrop {
+  z-index: 80;
+  align-items: center;
+  justify-content: center;
+}
+
+.condition-detail-panel {
+  position: relative;
+  width: min(28rem, 100%);
+  padding: clamp(1.5rem, 5vw, 2.5rem);
+  border: 0.25rem solid #fff;
+  border-radius: 1.75rem;
+  color: var(--md-text);
+  background: var(--md-surface);
+  box-shadow: var(--md-shadow);
+  text-align: center;
+}
+
+.condition-detail-icon {
+  display: grid;
+  width: 4rem;
+  height: 4rem;
+  margin: 0 auto 1rem;
+  place-items: center;
+  border-radius: 1.2rem;
+  background: #e7faf7;
+  box-shadow: inset 0 0 0 2px rgb(36 48 71 / 8%);
+  font-size: 1.8rem;
+  font-weight: 900;
+}
+
+.condition-detail-panel h2 {
+  margin: 0.25rem 0 0.75rem;
+  font-size: clamp(1.65rem, 6vw, 2.25rem);
+}
+
+.condition-detail-panel h2:focus { outline: none; }
+
+.condition-detail-description {
+  margin: 0 auto 1.5rem;
+  color: var(--md-muted);
+  font-size: 1rem;
+  line-height: 1.6;
+}
 
 .intro-action {
   display: flex;
@@ -1128,6 +1182,11 @@
   margin-top: 0.35rem;
   font-size: 0.72rem;
   line-height: 1.15;
+}
+
+.condition-grid-compact .condition-more {
+  margin-top: 0.25rem;
+  font-size: 0.62rem;
 }
 
 .condition-grid-compact .condition-number { display: none; }
@@ -2394,7 +2453,6 @@
   box-shadow: 0.22rem 0.28rem 0 rgb(0 0 0 / 22%);
 }
 .table-conditions .condition-grid-compact .condition-tile > strong { color: #26364b; font-size: 0.78rem; }
-.condition-description { display: -webkit-box; overflow: hidden; margin: 0.3rem 0 0; color: #627078; font-size: 0.65rem; line-height: 1.25; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 
 .patient-table-center {
   position: relative;
