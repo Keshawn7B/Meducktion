@@ -287,6 +287,7 @@ describe("competitive card-game UI", () => {
     await user.click(appendicitisCard);
     const dialog = screen.getByRole("dialog", { name: "Appendicitis" });
     expect(dialog).toHaveTextContent("Irritation of the appendix.");
+    expect(dialog.parentElement).toHaveClass("meducktion-app", "condition-detail-backdrop");
 
     await user.keyboard("{Escape}");
     expect(screen.getByRole("dialog", { name: "Appendicitis" })).toBeInTheDocument();

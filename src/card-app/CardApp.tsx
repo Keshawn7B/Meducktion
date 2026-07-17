@@ -966,7 +966,7 @@ function ConditionGrid({ conditions, compact = false }: { conditions: CardAppMod
         ))}
       </div>
       {selectedCondition && createPortal(
-        <div className="modal-backdrop condition-detail-backdrop">
+        <div className="meducktion-app modal-backdrop condition-detail-backdrop">
           <section
             className="condition-detail-panel"
             role="dialog"
