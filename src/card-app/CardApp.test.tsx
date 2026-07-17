@@ -289,6 +289,9 @@ describe("competitive card-game UI", () => {
     expect(dialog).toHaveTextContent("Irritation of the appendix.");
 
     await user.keyboard("{Escape}");
+    expect(screen.getByRole("dialog", { name: "Appendicitis" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Back to the case" }));
     expect(screen.queryByRole("dialog", { name: "Appendicitis" })).not.toBeInTheDocument();
     expect(appendicitisCard).toHaveFocus();
   });

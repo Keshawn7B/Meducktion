@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { FormEvent } from "react";
+import { createPortal } from "react-dom";
 import type {
   CardAppActions,
   CardAppModel,
@@ -922,12 +923,12 @@ function ConditionGrid({ conditions, compact = false }: { conditions: CardAppMod
   useEffect(() => {
     if (!selectedCondition) return;
 
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     dialogTitleRef.current?.focus();
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeDetails();
+    return () => {
+      document.body.style.overflow = previousOverflow;
     };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
   }, [selectedCondition]);
 
   function openDetails(
@@ -964,18 +965,28 @@ function ConditionGrid({ conditions, compact = false }: { conditions: CardAppMod
           </button>
         ))}
       </div>
-      {selectedCondition && (
-        <div
-          className="modal-backdrop condition-detail-backdrop"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) closeDetails();
-          }}
-        >
+      {selectedCondition && createPortal(
+        <div className="modal-backdrop condition-detail-backdrop">
           <section
             className="condition-detail-panel"
             role="dialog"
             aria-modal="true"
             aria-labelledby="condition-detail-title"
+            onKeyDown={(event) => {
+              if (event.key !== "Tab") return;
+              const controls = Array.from(
+                event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"),
+              );
+              const firstControl = controls[0];
+              const lastControl = controls.at(-1);
+              if (event.shiftKey && (document.activeElement === firstControl || document.activeElement === dialogTitleRef.current)) {
+                event.preventDefault();
+                lastControl?.focus();
+              } else if (!event.shiftKey && document.activeElement === lastControl) {
+                event.preventDefault();
+                firstControl?.focus();
+              }
+            }}
           >
             <button
               className="modal-close"
@@ -999,7 +1010,8 @@ function ConditionGrid({ conditions, compact = false }: { conditions: CardAppMod
               Back to the case
             </button>
           </section>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );

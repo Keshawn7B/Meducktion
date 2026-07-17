@@ -986,7 +986,7 @@
 }
 
 .condition-detail-backdrop {
-  z-index: 80;
+  z-index: 120;
   align-items: center;
   justify-content: center;
 }
@@ -994,12 +994,15 @@
 .condition-detail-panel {
   position: relative;
   width: min(28rem, 100%);
+  max-height: calc(100dvh - 2rem);
   padding: clamp(1.5rem, 5vw, 2.5rem);
+  margin: auto;
   border: 0.25rem solid #fff;
   border-radius: 1.75rem;
   color: var(--md-text);
   background: var(--md-surface);
   box-shadow: var(--md-shadow);
+  overflow-y: auto;
   text-align: center;
 }
 
